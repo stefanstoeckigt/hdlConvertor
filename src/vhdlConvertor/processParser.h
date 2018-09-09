@@ -30,6 +30,8 @@ class ProcessParser {
 public:
     static Process * visitProcess_statement(
                 vhdlParser::Process_statementContext * ctx); 
+    static char * visitLabel_colon(
+		        vhdlParser::Label_colonContext * ctx);            
     static std::vector<Variable*> * visitSensitivity_list(
                 vhdlParser::Sensitivity_listContext *ctx);            
     static void visitProcess_declarative_item(

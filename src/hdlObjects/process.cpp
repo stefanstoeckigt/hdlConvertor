@@ -34,8 +34,10 @@ PyObject * Process::toJson() const {
 	//addJsonArrP(d, "sensitivity_list", sensitivity_list);
 
 	NotImplementedLogger::print("Process - Debug 6");
-	JSN_DEBUG("Process - body")
-	addJsonArrP(d, "body", body);
+	if (!body.empty()) {
+		JSN_DEBUG("Process - body")
+		addJsonArrP(d, "body", body);
+	}
 	NotImplementedLogger::print("Process - Debug 7");	
 	return d;
 }

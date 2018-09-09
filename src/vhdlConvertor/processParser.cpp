@@ -12,7 +12,7 @@ Process * ProcessParser::visitProcess_statement(
         //  ;
     Process * p = new Process();
     if (ctx->label_colon()) {  
-        p->entityName = strdup(ctx->label_colon()->identifier()->getText().c_str());      
+        p->entityName = visitLabel_colon(ctx->label_colon());      
     } else {
 		p->entityName = NULL;
 	}
@@ -28,10 +28,23 @@ Process * ProcessParser::visitProcess_statement(
 
 	auto statParts = visitProcess_statement_part(ctx->process_statement_part());
 	for (auto sp : *statParts) {
-		p->body.push_back(sp);
+		if (sp) {
+			p->body.push_back(sp);
+		}
 	}
     	
     return p;
+}
+
+char * ProcessParser::visitLabel_colon(
+		vhdlParser::Label_colonContext * ctx) {
+	// label_colon
+	// : identifier COLON
+	// ;
+	Expr * e = LiteralParser::visitIdentifier(ctx->identifier());
+	char * s = strdup(dynamic_cast<Symbol*>(e->data)->value._str);
+	delete e;
+	return s;
 }
 
 std::vector<Variable*> * ProcessParser::visitSensitivity_list (
