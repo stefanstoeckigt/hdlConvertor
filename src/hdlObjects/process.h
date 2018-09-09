@@ -6,18 +6,20 @@
 #include "named.h"
 #include "expr.h"
 #include "function.h"
-#include "constant.h"
 #include "variable.h"
+#include "statement.h"
 
-class Process{
+class Process {
 public:
-	Expr * entityName;
+	const char * entityName;
 	
 	std::vector<Function*> functions;
-	std::vector<Constant*> constants;
+	std::vector<Variable*> constants;
+	std::vector<Variable*> variables;
 	std::vector<Variable*> sensitivity_list;
+	std::vector<Statement*> body;
 
-	Process(Expr * _entityName);
+	Process();
 #ifdef USE_PYTHON
 	PyObject * toJson() const;
 #endif

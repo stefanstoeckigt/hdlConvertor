@@ -17,7 +17,10 @@
 #include "interfaceParser.h"
 #include "literalParser.h"
 #include "subProgramDeclarationParser.h"
+#include "variableParser.h"
 #include "constantParser.h"
+#include "statementParser.h"
+
 
 using namespace antlr4;
 using namespace vhdl;
@@ -33,4 +36,6 @@ public:
                 vhdlParser::Process_declarative_itemContext *ctx, Process * p);
     static void visitProcess_declarative_part(
                 vhdlParser::Process_declarative_partContext *ctx, Process * p);	
+    static std::vector<Statement *> * visitProcess_statement_part(
+		        vhdlParser::Process_statement_partContext *ctx);            
 };            

@@ -106,9 +106,12 @@ void ArchParser::visitBlock_declarative_item(
 	}
 	auto vd = ctx->variable_declaration();
 	if (vd) {
-		NotImplementedLogger::print(
-				"ArchParser.visitVariable_declaration");
-		return;			
+		auto variables = VariableParser::visitVariable_declaration(vd);
+		for (auto v : *variables) {
+			a->variables.push_back(v);
+		}
+		delete variables;
+        return;   			
 	}
 	auto fd = ctx->file_declaration();
 	if (fd) {

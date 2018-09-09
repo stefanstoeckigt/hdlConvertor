@@ -7,8 +7,6 @@
 #include "../hdlObjects/named.h"
 #include "../hdlObjects/function.h"
 #include "../hdlObjects/variable.h"
-#include "../hdlObjects/signal.h"
-#include "../hdlObjects/constant.h"
 #include "../hdlObjects/packageHeader.h"
 
 #include "compInstanceParser.h"
@@ -23,7 +21,7 @@ using namespace vhdl;
 
 class ConstantParser {
 public:
-	static std::vector<Constant*> * visitConstant_declaration(
+	static std::vector<Variable*> * visitConstant_declaration(
 			vhdlParser::Constant_declarationContext* ctx);		
 
 };

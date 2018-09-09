@@ -10,14 +10,27 @@ Process * ProcessParser::visitProcess_statement(
         //    process_statement_part 
         //    END ( POSTPONED )? PROCESS ( identifier )? SEMI
         //  ;
-    Expr * e = NULL;
+    Process * p = new Process();
     if (ctx->label_colon()) {  
-        e = LiteralParser::visitIdentifier(ctx->label_colon()->identifier()); 
-    }
-    Process * p = new Process(e); 
+        p->entityName = strdup(ctx->label_colon()->identifier()->getText().c_str());      
+    } else {
+		p->entityName = NULL;
+	}
 
-    //p->sensitivity_list = visitSensitivity_list(ctx->sensitivity_list());
-    //visitProcess_declarative_part(ctx->process_declarative_part(), p);
+	if (ctx->sensitivity_list()) {
+		auto sensList = visitSensitivity_list(ctx->sensitivity_list());
+		for (auto sl : *sensList) {
+    		p->sensitivity_list.push_back(sl);
+		}
+	}
+
+    visitProcess_declarative_part(ctx->process_declarative_part(), p);
+
+	auto statParts = visitProcess_statement_part(ctx->process_statement_part());
+	for (auto sp : *statParts) {
+		p->body.push_back(sp);
+	}
+    	
     return p;
 }
 
@@ -95,8 +108,11 @@ void ProcessParser::visitProcess_declarative_item (
 	}    
 	auto vd = ctx->variable_declaration();
 	if (vd) {
-		NotImplementedLogger::print(
-				"ProcessParser.visitVariable_declaration");
+		auto variables = VariableParser::visitVariable_declaration(vd);
+		for (auto v : *variables) {
+			p->variables.push_back(v);
+		}
+		delete variables;
         return;        
 	}
 	auto fd = ctx->file_declaration();
@@ -140,6 +156,18 @@ void ProcessParser::visitProcess_declarative_item (
 				"ProcessParser.visitGroup_declaration");
         return;        
 	}
+}
+
+std::vector<Statement *> * ProcessParser::visitProcess_statement_part(
+		vhdlParser::Process_statement_partContext *ctx) {
+    //process_statement_part
+    //  : ( sequential_statement )*
+    //  ;
+	std::vector<Statement *> * statements = new std::vector<Statement*>();
+	for (auto s : ctx->sequential_statement()) {
+		statements->push_back(StatementParser::visitSequential_statement(s));
+	}
+	return statements;
 }
 
 

@@ -7,8 +7,6 @@
 #include "../hdlObjects/named.h"
 #include "../hdlObjects/function.h"
 #include "../hdlObjects/variable.h"
-#include "../hdlObjects/signal.h"
-#include "../hdlObjects/constant.h"
 #include "../hdlObjects/packageHeader.h"
 
 #include "compInstanceParser.h"
@@ -23,7 +21,7 @@ using namespace vhdl;
 
 class SignalParser {
 public:
-    static std::vector<Signal*> * visitSignal_declaration(
+    static std::vector<Variable*> * visitSignal_declaration(
 		    vhdlParser::Signal_declarationContext* ctx);			
 
 };

@@ -1,5 +1,4 @@
 #include "arch.h"
-#include "../notImplementedLogger.h"
 
 #ifdef USE_PYTHON
 PyObject * Arch::toJson() const {
@@ -27,9 +26,10 @@ PyObject * Arch::toJson() const {
 
 	JSN_DEBUG("Arch - constants")
 	addJsonArrP(o, "constants", constants);
-	NotImplementedLogger::print("Arch - Debug 1");
+
 	JSN_DEBUG("Arch - processes")
 	addJsonArrP(o, "processes", processes);
+	
 	return o;
 }
 #endif

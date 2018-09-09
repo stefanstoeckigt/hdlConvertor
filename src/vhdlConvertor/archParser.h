@@ -14,6 +14,7 @@
 #include "interfaceParser.h"
 #include "subProgramDeclarationParser.h"
 #include "processParser.h"
+#include "variableParser.h"
 #include "signalParser.h"
 #include "constantParser.h"
 
