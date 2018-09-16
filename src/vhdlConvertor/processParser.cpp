@@ -10,6 +10,9 @@ Process * ProcessParser::visitProcess_statement(
         //    process_statement_part 
         //    END ( POSTPONED )? PROCESS ( identifier )? SEMI
         //  ;
+
+	printf("ProcessParser.visitProcess_statement - Start: %zu Stop: %zu\n", ctx->getStart()->getLine(), ctx->getStop()->getLine());
+	
     Process * p = new Process();
     if (ctx->label_colon()) {  
         p->entityName = visitLabel_colon(ctx->label_colon());      
@@ -20,7 +23,9 @@ Process * ProcessParser::visitProcess_statement(
 	if (ctx->sensitivity_list()) {
 		auto sensList = visitSensitivity_list(ctx->sensitivity_list());
 		for (auto sl : *sensList) {
-    		p->sensitivity_list.push_back(sl);
+			if (sl) {
+    			p->sensitivities.push_back(sl);
+			}
 		}
 	}
 
@@ -47,15 +52,14 @@ char * ProcessParser::visitLabel_colon(
 	return s;
 }
 
-std::vector<Variable*> * ProcessParser::visitSensitivity_list (
+std::vector<Expr*> * ProcessParser::visitSensitivity_list (
         vhdlParser::Sensitivity_listContext *ctx) {
     //sensitivity_list
     //  : name ( COMMA name )*
     //  ;
-    std::vector<Variable*> * names = new std::vector<Variable*>();
+    std::vector<Expr*> * names = new std::vector<Expr*>();
     for (auto n : ctx->name()) {
-        Variable * v = new Variable(n->getText(), NULL, NULL);
-        names->push_back(v);
+        names->push_back(ReferenceParser::visitName(n));
     }
     return names;
 }
@@ -89,14 +93,15 @@ void ProcessParser::visitProcess_declarative_item (
     //  ;
     auto sp = ctx->subprogram_declaration();
 	if (sp) {
-		p->functions.push_back(subProgramDeclarationParser::visitSubprogram_declaration(sp));
+		p->function_headers.push_back(SubProgramDeclarationParser::visitSubprogram_declaration(sp));
         return;
 	}
     auto sb = ctx->subprogram_body();
 	if (sb) {
-		NotImplementedLogger::print(
-				"ProcessParser.visitSubprogram_body");
-        return;        
+		// TODO: Implement
+		//Function * f = SubProgramParser::visitSubprogram_body(sb);
+		//p->functions.push_back(f);
+		return;
 	}
     auto td = ctx->type_declaration();
 	if (td) {
@@ -106,9 +111,9 @@ void ProcessParser::visitProcess_declarative_item (
 	}
     auto st = ctx->subtype_declaration();
 	if (st) {
-		NotImplementedLogger::print(
-				"ProcessParser.visitSubtype_declaration");
-        return;        
+		auto _st = SubtypeDeclarationParser::visitSubtype_declaration(st);
+		p->subtype_headers.push_back(_st);
+		return;	       
 	}
     auto constd = ctx->constant_declaration();
 	if (constd) {
@@ -169,6 +174,9 @@ void ProcessParser::visitProcess_declarative_item (
 				"ProcessParser.visitGroup_declaration");
         return;        
 	}
+	NotImplementedLogger::print(
+			"ProcessParser.visitProcess_declarative_item");
+	return;
 }
 
 std::vector<Statement *> * ProcessParser::visitProcess_statement_part(

@@ -7,6 +7,13 @@ std::vector<Variable*> * ConstantParser::visitConstant_declaration(
 	//    ( VARASGN expression )? SEMI
 	//  ;
 
+	//return InterfaceParser::extractVariables(ctx->identifier_list(),
+	//		ctx->subtype_indication(), ctx->expression());
+	// TODO: Expression
+
+	NotImplementedLogger::print(
+				"ConstantParser.visitConstant_declaration");
+
 	return InterfaceParser::extractVariables(ctx->identifier_list(),
-			ctx->subtype_indication(), ctx->expression());
+			ctx->subtype_indication(), NULL);
 }

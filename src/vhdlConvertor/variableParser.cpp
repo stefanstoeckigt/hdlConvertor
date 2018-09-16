@@ -2,11 +2,18 @@
 
 std::vector<Variable*> * VariableParser::visitVariable_declaration(
 		vhdlParser::Variable_declarationContext *ctx) {	
-	//constant_declaration :
-	//    CONSTANT identifier_list COLON subtype_indication
-	//    ( VARASGN expression )? SEMI
-	//  ;
+	// variable_declaration :
+	// ( SHARED )? VARIABLE identifier_list COLON
+	// subtype_indication ( VARASGN expression )? SEMI
+	// ;
 
-	return InterfaceParser::extractVariables(ctx->identifier_list(),
-			ctx->subtype_indication(), ctx->expression());
+	if (ctx->SHARED())
+		NotImplementedLogger::print(
+				"VariableParser.visitVariable_declaration - SHARED");
+
+	std::vector<Variable*> * vl = InterfaceParser::extractVariables(
+			ctx->identifier_list(), ctx->subtype_indication(),
+			ctx->expression());
+
+	return vl;
 }

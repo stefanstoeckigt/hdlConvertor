@@ -1,5 +1,4 @@
 #include "process.h"
-#include "../notImplementedLogger.h"
 
 Process::Process() {
 }
@@ -8,7 +7,6 @@ Process::Process() {
 PyObject * Process::toJson() const {
 	PyObject *d = PyDict_New();
 
-    NotImplementedLogger::print("Process - Debug 1");
 	if (entityName) {
 		JSN_DEBUG("Arch - entityName")
 		PyDict_SetItemString(d, "entityName", PyUnicode_FromString(entityName));
@@ -17,28 +15,28 @@ PyObject * Process::toJson() const {
 		PyDict_SetItemString(d, "entityName", Py_None);
 	}
 
-	NotImplementedLogger::print("Process - Debug 2");
-	JSN_DEBUG("Process - functions")
+	JSN_DEBUG("Arch - function_headers")
+	addJsonArrP(d, "function_headers", function_headers);
+
+	JSN_DEBUG("Arch - functions")
 	addJsonArrP(d, "functions", functions);
 
-	NotImplementedLogger::print("Process - Debug 3");
+	JSN_DEBUG("Arch - subtype_headers")
+	addJsonArrP(d, "subtype_headers", subtype_headers);
+
 	JSN_DEBUG("Process - constants")
 	addJsonArrP(d, "constants", constants);
 
-	NotImplementedLogger::print("Process - Debug 4");
 	JSN_DEBUG("Process - variable")
 	addJsonArrP(d, "variables", variables);
 
-	NotImplementedLogger::print("Process - Debug 5");
-	JSN_DEBUG("Process - sensitivity_list")
-	//addJsonArrP(d, "sensitivity_list", sensitivity_list);
+	JSN_DEBUG("Process - sensitivities")
+	addJsonArrP(d, "sensitivities", sensitivities);
 
-	NotImplementedLogger::print("Process - Debug 6");
 	if (!body.empty()) {
 		JSN_DEBUG("Process - body")
-		addJsonArrP(d, "body", body);
+		addJsonArrP(d, "body", body);	
 	}
-	NotImplementedLogger::print("Process - Debug 7");	
 	return d;
 }
 #endif
@@ -46,10 +44,13 @@ PyObject * Process::toJson() const {
 void Process::dump(int indent) const {
 	mkIndent(indent) << "{\n";
 	indent += INDENT_INCR;
+	dumpArrP("function_headers", indent, function_headers) << ",\n";
 	dumpArrP("functions", indent, functions) << ",\n";
+	dumpArrP("subtype_headers", indent, subtype_headers) << ",\n";		
 	dumpArrP("constants", indent, constants) << ",\n";
 	dumpArrP("variables", indent, variables) << ",\n";
-	dumpArrP("sensitivity_list", indent, sensitivity_list) << ",\n";
+	dumpArrP("sensitivities", indent, sensitivities) << ",\n";
+	
 	//dumpArrP("body", indent, body) << ",\n";
 	indent -= INDENT_INCR;
 	mkIndent(indent) << "}";
@@ -57,13 +58,17 @@ void Process::dump(int indent) const {
 
 
 Process::~Process() {
+	for (auto fh : function_headers)
+		delete fh;
 	for (auto f : functions)
 		delete f;
+	for (auto sh : subtype_headers)
+		delete sh;	
     for (auto c : constants)
 		delete c;
 	for (auto v : variables)
 		delete v;	    
-    for (auto s : sensitivity_list)
+    for (auto s : sensitivities)
 		delete s;	        
     for (auto b : body)
 		delete b; 		     

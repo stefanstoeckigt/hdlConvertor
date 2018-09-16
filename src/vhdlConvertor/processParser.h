@@ -16,11 +16,13 @@
 #include "entityParser.h"
 #include "interfaceParser.h"
 #include "literalParser.h"
+#include "referenceParser.h"
 #include "subProgramDeclarationParser.h"
 #include "variableParser.h"
 #include "constantParser.h"
 #include "statementParser.h"
-
+#include "subtypeDeclarationParser.h"
+#include "subProgramParser.h" 
 
 using namespace antlr4;
 using namespace vhdl;
@@ -32,7 +34,7 @@ public:
                 vhdlParser::Process_statementContext * ctx); 
     static char * visitLabel_colon(
 		        vhdlParser::Label_colonContext * ctx);            
-    static std::vector<Variable*> * visitSensitivity_list(
+    static std::vector<Expr*> * visitSensitivity_list(
                 vhdlParser::Sensitivity_listContext *ctx);            
     static void visitProcess_declarative_item(
                 vhdlParser::Process_declarative_itemContext *ctx, Process * p);

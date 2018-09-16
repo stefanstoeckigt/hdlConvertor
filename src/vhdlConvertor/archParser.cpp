@@ -14,6 +14,9 @@ Arch * ArchParser::visitArchitecture_body(
 	// architecture_statement_part
 	// END ( ARCHITECTURE )? ( identifier )? SEMI
 	// ;
+
+	printf("ArchParser.visitArchitecture_body - Start: %zu Stop: %zu\n", ctx->getStart()->getLine(), ctx->getStop()->getLine());
+	
 	a->name = strdup(ctx->identifier(0)->getText().c_str());
 	a->entityName = strdup(ctx->identifier(1)->getText().c_str());
 	if (!hierarchyOnly) {
@@ -29,20 +32,10 @@ Arch * ArchParser::visitArchitecture_body(
 		// : ( architecture_statement )*
 		// ;
 		visitArchitecture_statement(s);
-	}
+	}	
 	return a;
 }
 
-Variable * ArchParser::visitSubtype_declaration(
-		vhdlParser::Subtype_declarationContext* ctx) {
-	//subtype_declaration
-	//  : SUBTYPE identifier IS subtype_indication SEMI
-	//  ;
-	auto t = ExprParser::visitSubtype_indication(ctx->subtype_indication());
-	std::shared_ptr<Expr> tt(Expr::TYPE_T());
-	Variable * v = new Variable(ctx->identifier()->getText(), tt, t);
-	return v;
-}
 void ArchParser::visitBlock_declarative_item(
 		vhdlParser::Block_declarative_itemContext * ctx) {
 	// block_declarative_item
@@ -71,8 +64,17 @@ void ArchParser::visitBlock_declarative_item(
 	// ;
 	auto sp = ctx->subprogram_declaration();
 	if (sp) {
-		a->functions.push_back(subProgramDeclarationParser::visitSubprogram_declaration(sp));
+		a->function_headers.push_back(SubProgramDeclarationParser::visitSubprogram_declaration(sp));
 		return;	
+	}
+	auto sb = ctx->subprogram_body();
+	if (sb) {
+		// TODO: Implement
+		//Function * f = SubProgramParser::visitSubprogram_body(sb);
+		//a->functions.push_back(f);
+		NotImplementedLogger::print(
+				"ArchParser.visitSubprogram_body");	
+		return;
 	}
 	auto td = ctx->type_declaration();
 	if (td) {
@@ -82,8 +84,8 @@ void ArchParser::visitBlock_declarative_item(
 	}
 	auto st = ctx->subtype_declaration();
 	if (st) {
-		auto _st = visitSubtype_declaration(st);
-		a->variables.push_back(_st);
+		auto _st = SubtypeDeclarationParser::visitSubtype_declaration(st);
+		a->subtype_headers.push_back(_st);
 		return;	
 	}
 	auto constd = ctx->constant_declaration();
@@ -198,6 +200,7 @@ void ArchParser::visitArchitecture_statement(
 	// | simultaneous_statement
 	// ;
 	// [TODO]
+
 	auto b = ctx->block_statement();
 	if (b) {
 		NotImplementedLogger::print(
@@ -216,6 +219,15 @@ void ArchParser::visitArchitecture_statement(
 				CompInstanceParser::visitComponent_instantiation_statement(ci));
 		return;			
 	} 
+
+	auto gs = ctx->generate_statement();
+	if (gs) {
+		//GenerateStatementParser::visitGenerate_statement(gs);
+		NotImplementedLogger::print(
+				"ArchParser.generate_statement");
+		return;
+	}
+
 }
 Entity * ArchParser::visitComponent_declaration(
 		vhdlParser::Component_declarationContext* ctx) {

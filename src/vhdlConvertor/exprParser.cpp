@@ -8,14 +8,24 @@ std::vector<Expr*> * ExprParser::visitActual_parameter_part(
 	// actual_parameter_part
 	// : association_list
 	// ;
+	
+	return visitAssociation_list(ctx->association_list());
+}
+
+std::vector<Expr*> * ExprParser::visitAssociation_list(
+		vhdlParser::Association_listContext *ctx) {
 	// association_list
 	// : association_element ( COMMA association_element )*
 	// ;
-	for (auto e : ctx->association_list()->association_element()) {
-		l->push_back(visitAssociation_element(e));
+
+	std::vector<Expr*> * ae = new std::vector<Expr*>();
+	for (auto e : ctx->association_element()) {
+		ae->push_back(visitAssociation_element(e));
 	}
-	return l;
+	return ae;
 }
+
+
 Expr* ExprParser::visitAssociation_element(
 		vhdlParser::Association_elementContext* ctx) {
 	// association_element
@@ -36,7 +46,7 @@ Expr* ExprParser::visitFormal_part(vhdlParser::Formal_partContext* ctx) {
 	Expr * id = LiteralParser::visitIdentifier(ctx->identifier());
 	auto er = ctx->explicit_range();
 	if (er) {
-		return new Expr(id, RANGE, visitExplicit_range(er));
+		return new Expr(id, INDEX, visitExplicit_range(er));
 	}
 	return id;
 }
@@ -202,9 +212,28 @@ Expr* ExprParser::visitSimple_expression(
 	return op0;
 }
 Expr* ExprParser::visitExpression(vhdlParser::ExpressionContext* ctx) {
-	// expression
-	// : relation ( : logical_operator relation )*
-	// ;
+	//expression
+	//	: CONDITION_OPERATOR primary
+	//	| logical_expression
+	//	;
+	auto le = ctx->logical_expression();
+	if (le)
+	{
+		return visitLogical_expression(le);
+	}
+
+	auto p = ctx->primary();
+	if (p)
+	{	
+		return  visitPrimary(p);
+	}
+}
+
+Expr* ExprParser::visitLogical_expression(
+		vhdlParser::Logical_expressionContext *ctx) {
+	//logical_expression
+	//  : relation ( : logical_operator relation )*
+	//  ;  
 	auto rel = ctx->relation();
 	auto relIt = rel.begin();
 	auto ops = ctx->logical_operator();
@@ -217,8 +246,10 @@ Expr* ExprParser::visitExpression(vhdlParser::ExpressionContext* ctx) {
 		op0 = new Expr(op0, OperatorType_from(*opIt), op1);
 		++opIt;
 	}
-	return op0;
+	return op0;			
+
 }
+
 Expr* ExprParser::visitRelation(vhdlParser::RelationContext* ctx) {
 	// relation
 	// : shift_expression
@@ -386,9 +417,9 @@ Expr* ExprParser::visitTarget(vhdlParser::TargetContext* ctx) {
 		return ReferenceParser::visitName(n);
 	} else {
 		return visitAggregate(ctx->aggregate());
-	}
-
+	}	
 }
+
 Expr * ExprParser::visitWaveform(vhdlParser::WaveformContext* ctx) {
 	// waveform :
 	// waveform_element ( COMMA waveform_element )*

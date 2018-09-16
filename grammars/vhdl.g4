@@ -47,6 +47,7 @@ ELSIF : E L S I F;
 EXIT : E X I T;
 FILE : F I L E;
 FOR : F O R;
+FORCE : F O R C E;
 FUNCTION : F U N C T I O N;
 GENERATE : G E N E R A T E;
 GENERIC : G E N E R I C;
@@ -95,6 +96,7 @@ REM : R E M;
 RECORD : R E C O R D;
 REFERENCE : R E F E R E N C E;
 REGISTER : R E G I S T E R;
+RELEASE : R E L E A S E;
 REPORT : R E P O R T;
 RETURN : R E T U R N;
 ROL : R O L;
@@ -449,8 +451,21 @@ concurrent_procedure_call_statement
   ;
 
 concurrent_signal_assignment_statement
-  : ( label_colon )? ( POSTPONED )?
-    ( conditional_signal_assignment | selected_signal_assignment )
+  : ( label_colon )? ( POSTPONED )? concurrent_simple_signal_assignment
+  | ( label_colon )? ( POSTPONED )? concurrent_conditional_signal_assignment
+  | ( label_colon )? ( POSTPONED )? concurrent_selected_signal_assignment
+  ;
+
+concurrent_simple_signal_assignment
+  : target LE opts waveform SEMI
+  ;
+
+concurrent_conditional_signal_assignment  
+  : target LE opts conditional_waveforms SEMI
+  ;
+
+concurrent_selected_signal_assignment
+  : WITH expression SELECT target (TERNARY)? LE opts selected_waveforms SEMI
   ;
 
 condition
@@ -462,12 +477,29 @@ condition_clause
   ;
 
 conditional_signal_assignment
-  : target LE opts conditional_waveforms SEMI
+  : conditional_waveform_assignment
+  | conditional_force_assignment 
   ;
 
-conditional_waveforms
-  : waveform ( WHEN condition (ELSE conditional_waveforms)?)?
+conditional_waveform_assignment
+  : target LE (delay_mechanism)? conditional_waveforms
   ;
+
+conditional_force_assignment
+  : target LE FORCE (force_mode)? conditional_expression
+  ;  
+
+conditional_waveforms
+  : waveform WHEN condition 
+    (ELSE waveform WHEN condition)* 
+    (ELSE waveform)?
+  ;  
+
+conditional_expression
+  : expression WHEN condition 
+    (ELSE expression WHEN condition)* 
+    (ELSE expression)?
+  ;  
 
 configuration_declaration
   : CONFIGURATION identifier OF name IS
@@ -692,9 +724,18 @@ exit_statement
 
 // NOTE that NAND/NOR are in (...)* now (used to be in (...)?).
 // (21.1.2004, e.f.)
+//expression
+//  : relation ( : logical_operator relation )*
+//  ;
+
 expression
-  : relation ( : logical_operator relation )*
+  : CONDITION_OPERATOR primary
+  | logical_expression
   ;
+
+logical_expression
+  : relation ( : logical_operator relation )*
+  ;  
 
 factor
   : primary ( : DOUBLESTAR primary )?
@@ -725,7 +766,7 @@ formal_parameter_list
 
 formal_part
   : identifier
-   | identifier LPAREN explicit_range  RPAREN 
+  | identifier LPAREN explicit_range  RPAREN 
   ;
 
 free_quantity_declaration
@@ -734,16 +775,45 @@ free_quantity_declaration
   ;
 
 generate_statement
-  : label_colon generation_scheme
+  : for_generate_statement
+  | if_generate_statement
+  | case_generate_statement
+  ;
+
+for_generate_statement
+  : label_colon FOR parameter_specification
     GENERATE
-    ( ( block_declarative_item )* BEGIN )?
-    ( architecture_statement )*
+    generate_statement_body
     END GENERATE ( identifier )? SEMI
+  ; 
+
+if_generate_statement
+  : ( label_colon )? IF condition GENERATE
+    generate_statement_body
+    ( ELSIF condition GENERATE generate_statement_body )*
+    ( ELSE GENERATE generate_statement_body)?
+    END GENERATE ( identifier )? SEMI
+  ;
+
+case_generate_statement
+  : ( label_colon )? CASE expression GENERATE
+    ( case_generate_alternative )+ 
+    END GENERATE ( identifier )? SEMI
+  ;
+
+case_generate_alternative
+  : WHEN choices ARROW generate_statement_body
+  ;
+
+generate_statement_body
+  : ( ( block_declarative_item )* BEGIN )?
+    ( architecture_statement )*
   ;
 
 generation_scheme
   : FOR parameter_specification
   | IF condition
+  | CASE expression
   ;
 
 generic_clause
@@ -1269,7 +1339,7 @@ secondary_unit_declaration
   ;
 
 selected_signal_assignment
-  : WITH expression SELECT target LE opts selected_waveforms SEMI
+  : WITH expression SELECT (TERNARY)? target LE opts selected_waveforms SEMI
   ;
 
 selected_waveforms
@@ -1319,9 +1389,33 @@ shift_operator
   | ROR
   ;
 
-signal_assignment_statement :
-   ( label_colon )?
-    target LE ( delay_mechanism )? waveform SEMI
+signal_assignment_statement
+  : ( label_colon )? simple_signal_assignment
+  | ( label_colon )? conditional_signal_assignment
+  | ( label_colon )? selected_signal_assignment
+  ;
+
+simple_signal_assignment
+  : simple_waveform_assignment 
+  | simple_force_assignment
+  | simple_release_assignment
+  ;
+
+simple_waveform_assignment
+  : target LE (delay_mechanism)? waveform SEMI
+  ;
+
+simple_force_assignment
+  : target LE FORCE (force_mode)? expression SEMI
+  ;
+
+simple_release_assignment
+  : target LE RELEASE (force_mode)? SEMI
+  ;
+
+force_mode
+  : IN
+  | OUT
   ;
 
 signal_declaration
@@ -1542,9 +1636,23 @@ use_clause
   : USE selected_name ( COMMA selected_name )* SEMI
   ;
 
-variable_assignment_statement :
-  ( label_colon )? target VARASGN expression SEMI
+variable_assignment_statement
+  : ( label_colon )? simple_variable_assignment
+  | ( label_colon )? conditional_variable_assignment
+  | ( label_colon )? selected_variable_assignment
   ;
+
+simple_variable_assignment 
+  : target VARASGN expression SEMI  
+  ;
+
+conditional_variable_assignment
+  : target VARASGN conditional_expression SEMI
+  ;
+
+selected_variable_assignment
+ : WITH expression SELECT (TERNARY)?
+ ;
 
 variable_declaration :
     ( SHARED )? VARIABLE identifier_list COLON
@@ -1580,18 +1688,23 @@ BIT_STRING_LITERAL
   : BIT_STRING_LITERAL_BINARY
   | BIT_STRING_LITERAL_OCTAL
   | BIT_STRING_LITERAL_HEX
+  | BIT_STRING_LITERAL_DEC
   ;
 
 BIT_STRING_LITERAL_BINARY
-    :   ('b'|'B') '"' ('1' | '0' | '_')+ '"'
+    :  (INTEGER)? ('u'|'U')? ('b'|'B') '"' ('1' | '0' | '_' | '-')+ '"'
     ;
 
 BIT_STRING_LITERAL_OCTAL
-    :   ('o'|'O') '"' ('7' |'6' |'5' |'4' |'3' |'2' |'1' | '0' | '_')+ '"'
+    :  (INTEGER)? ('u'|'U')? ('o'|'O') '"' ('7' |'6' |'5' |'4' |'3' |'2' |'1' | '0' | '_' | '-')+ '"'
     ;
 
 BIT_STRING_LITERAL_HEX
-    :   ('x'|'X') '"' ( 'f' |'e' |'d' |'c' |'b' |'a' | 'F' |'E' |'D' |'C' |'B' |'A' | '9' | '8' | '7' |'6' |'5' |'4' |'3' |'2' |'1' | '0' | '_')+ '"'
+    :  (INTEGER)? ('u'|'U')? ('x'|'X') '"' ( 'f' |'e' |'d' |'c' |'b' |'a' | 'F' |'E' |'D' |'C' |'B' |'A' | '9' | '8' | '7' |'6' |'5' |'4' |'3' |'2' |'1' | '0' | '_'| '-')+  '"'
+    ;
+
+BIT_STRING_LITERAL_DEC
+    :  (INTEGER)? ('d'|'D') '"' ('9' | '8' | '7' |'6' |'5' |'4' |'3' |'2' |'1' | '0' | '_' | '-')+ '"'
     ;
 
 REAL_LITERAL
@@ -1609,7 +1722,16 @@ EXTENDED_IDENTIFIER
   ;
 
 LETTER	
-  :  'a'..'z' | 'A'..'Z'
+  : LOWER_CASE_LETTER 
+  | UPPER_CASE_LETTER
+  ;
+
+LOWER_CASE_LETTER
+  : 'a'..'z'
+  ; 
+
+UPPER_CASE_LETTER
+  : 'A'..'Z'
   ;
 
 COMMENT
@@ -1685,6 +1807,8 @@ EQ            : '='   ;
 BAR           : '|'   ;
 DOT           : '.'   ;
 BACKSLASH     : '\\'  ;
+TERNARY       : '?'   ;
+CONDITION_OPERATOR  : '?' '?' ;  
   
 
 EXPONENT

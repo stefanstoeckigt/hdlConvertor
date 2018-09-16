@@ -15,8 +15,14 @@ PyObject * Arch::toJson() const {
 	JSN_DEBUG("Arch - components")
 	addJsonArrP(o, "components", components);
 
+	JSN_DEBUG("Arch - function_headers")
+	addJsonArrP(o, "function_headers", function_headers);
+
 	JSN_DEBUG("Arch - functions")
 	addJsonArrP(o, "functions", functions);
+
+	JSN_DEBUG("Arch - subtype_headers")
+	addJsonArrP(o, "subtype_headers", subtype_headers);
 
 	JSN_DEBUG("Arch - variables")
 	addJsonArrP(o, "variables", variables);
@@ -42,8 +48,12 @@ Arch::~Arch() {
 		delete c;
 	for (auto c : constants)
 		delete c;		
+	for (auto fh : function_headers)
+		delete fh;
 	for (auto f : functions)
 		delete f;
+	for (auto sh : subtype_headers)
+		delete sh;				
 	for (auto v : variables)
 		delete v;	
 	for (auto p : processes)

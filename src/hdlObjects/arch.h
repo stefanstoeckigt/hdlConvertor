@@ -14,7 +14,9 @@ public:
 	const char * entityName;
 	std::vector<CompInstance*> componentInstances;
 	std::vector<Entity*> components;	
+	std::vector<Function*> function_headers;
 	std::vector<Function*> functions;
+	std::vector<Variable*> subtype_headers;
 	std::vector<Variable*> variables;	
 	std::vector<Variable*> signals;
 	std::vector<Variable*> constants;

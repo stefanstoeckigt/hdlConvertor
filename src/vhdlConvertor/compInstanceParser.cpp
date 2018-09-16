@@ -29,11 +29,6 @@ CompInstance * CompInstanceParser::visitComponent_instantiation_statement(
 
 	return ci;
 }
-std::vector<Expr*> * CompInstanceParser::visitPort_map_aspect(
-		vhdlParser::Port_map_aspectContext * ctx) {
-	NotImplementedLogger::print("CompInstanceParser.visitPort_map_aspect");
-	return new std::vector<Expr*>();
-}
 char * CompInstanceParser::visitLabel_colon(
 		vhdlParser::Label_colonContext * ctx) {
 	// label_colon
@@ -67,6 +62,28 @@ CompInstance * CompInstanceParser::visitInstantiated_unit(
 }
 std::vector<Expr*> * CompInstanceParser::visitGeneric_map_aspect(
 		vhdlParser::Generic_map_aspectContext* ctx) {
-	NotImplementedLogger::print("CompInstanceParser.visitGeneric_map_aspect");
+	//generic_map_aspect
+	//  : GENERIC MAP LPAREN association_list RPAREN
+	//  ;
+
+	NotImplementedLogger::print(
+				"CompInstanceParser.visitGeneric_map_aspect");
+	return new std::vector<Expr*>(); 			
+
+	//TODO: implement 
+	//return ExprParser::visitAssociation_list(ctx->association_list());
+}
+std::vector<Expr*> * CompInstanceParser::visitPort_map_aspect(
+		vhdlParser::Port_map_aspectContext * ctx) {
+	//port_map_aspect
+	//  : PORT MAP LPAREN association_list RPAREN
+	//  ;
+	
+	NotImplementedLogger::print(
+				"CompInstanceParser.visitPort_map_aspect");
+
 	return new std::vector<Expr*>();
+
+	//TODO: implement 
+	//return ExprParser::visitAssociation_list(ctx->association_list());
 }

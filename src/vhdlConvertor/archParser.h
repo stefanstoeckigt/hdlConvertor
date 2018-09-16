@@ -17,6 +17,9 @@
 #include "variableParser.h"
 #include "signalParser.h"
 #include "constantParser.h"
+#include "subtypeDeclarationParser.h"
+#include "subProgramParser.h" 
+#include "generateStatementParser.h"
 
 using namespace antlr4;
 using namespace vhdl;
@@ -33,7 +36,6 @@ public:
 	void visitArchitecture_statement(
 			vhdlParser::Architecture_statementContext * ctx);
 	Entity * visitComponent_declaration(
-			vhdlParser::Component_declarationContext* ctx);					
-	static Variable * visitSubtype_declaration(vhdlParser::Subtype_declarationContext* ctx);			
+			vhdlParser::Component_declarationContext* ctx);								
 
 };
