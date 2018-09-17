@@ -10,6 +10,7 @@
 #include "../hdlObjects/variable.h"
 #include "../hdlObjects/packageHeader.h"
 #include "../hdlObjects/process.h"
+#include "../hdlObjects/position.h"
 
 #include "compInstanceParser.h"
 #include "exprParser.h"

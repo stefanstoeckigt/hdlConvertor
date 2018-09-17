@@ -8,20 +8,23 @@ PyObject * Process::toJson() const {
 	PyObject *d = PyDict_New();
 
 	if (entityName) {
-		JSN_DEBUG("Arch - entityName")
+		JSN_DEBUG("Process - entityName")
 		PyDict_SetItemString(d, "entityName", PyUnicode_FromString(entityName));
 	} else {
 		Py_IncRef (Py_None);
 		PyDict_SetItemString(d, "entityName", Py_None);
 	}
 
-	JSN_DEBUG("Arch - function_headers")
+	JSN_DEBUG("Process - position")
+	PyDict_SetItemString(d, "position", position->toJson());
+
+	JSN_DEBUG("Process - function_headers")
 	addJsonArrP(d, "function_headers", function_headers);
 
-	JSN_DEBUG("Arch - functions")
+	JSN_DEBUG("Process - functions")
 	addJsonArrP(d, "functions", functions);
 
-	JSN_DEBUG("Arch - subtype_headers")
+	JSN_DEBUG("Process - subtype_headers")
 	addJsonArrP(d, "subtype_headers", subtype_headers);
 
 	JSN_DEBUG("Process - constants")

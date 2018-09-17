@@ -14,6 +14,7 @@ Process * ProcessParser::visitProcess_statement(
 	printf("ProcessParser.visitProcess_statement - Start: %zu Stop: %zu\n", ctx->getStart()->getLine(), ctx->getStop()->getLine());
 	
     Process * p = new Process();
+	p->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
     if (ctx->label_colon()) {  
         p->entityName = visitLabel_colon(ctx->label_colon());      
     } else {

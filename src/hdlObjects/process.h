@@ -8,11 +8,13 @@
 #include "function.h"
 #include "variable.h"
 #include "statement.h"
+#include "position.h"
 
 class Process {
 public:
 	const char * entityName;
-	
+	Position * position;
+
 	std::vector<Function*> function_headers;
 	std::vector<Function*> functions;
 	std::vector<Variable*> subtype_headers;
