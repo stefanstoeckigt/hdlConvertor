@@ -4,16 +4,19 @@
 #include "expr.h"
 #include "position.h"
 
-class CompInstance: public Named {
+namespace hdlConvertor {
+namespace hdlObjects {
+
+class CompInstance: public WithDoc, public WithPos {
 public:
+	Expr * name;
 	Expr * entityName;
-	Position * position = NULL;	
 	std::vector<Expr*> genericMap;
 	std::vector<Expr*> portMap;
 
-	CompInstance(char * name, Expr * _entityName);
-#ifdef USE_PYTHON
-	PyObject * toJson() const;
-#endif
+	CompInstance(Expr * name, Expr * _entityName);
 	~CompInstance();
 };
+
+}
+}

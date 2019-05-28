@@ -1,4 +1,15 @@
-#include "subProgramParser.h" 
+#include "subProgramParser.h"
+#include "subProgramDeclarationParser.h"
+#include "literalParser.h"
+#include "statementParser.h"
+#include "exprParser.h"
+#include "interfaceParser.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using namespace hdlConvertor::hdlObjects;
+using vhdlParser = vhdl_antlr::vhdlParser;
 
 Function * SubProgramParser::visitSubprogram_body(
 		vhdlParser::Subprogram_bodyContext* ctx) {
@@ -74,7 +85,7 @@ Function * SubProgramParser::visitFunction_specification(
 
 	bool isOperator = LiteralParser::isStrDesignator(designator);
 	char * name = LiteralParser::visitDesignator(designator);
-	
+
 	auto fpl = ctx->formal_parameter_list();
 	std::vector<Variable*> * paramList = new std::vector<Variable*>();
 	if (fpl)
@@ -101,4 +112,7 @@ std::vector<Statement *> * SubProgramParser::visitSubprogram_statement_part(
 		statements->push_back(StatementParser::visitSequential_statement(s));
 	}
 	return statements;
+}
+
+}
 }

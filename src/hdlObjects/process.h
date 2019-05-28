@@ -1,32 +1,40 @@
 #pragma once
 
 #include <vector>
-#include "jsonable.h"
-#include <assert.h>
 #include "named.h"
-#include "expr.h"
+#include "statement.h"
+#include "statement.h"
 #include "function.h"
 #include "variable.h"
-#include "statement.h"
 #include "position.h"
 
-class Process {
+namespace hdlConvertor {
+namespace hdlObjects {
+
+/*
+ * Class for representation of the process in HDL
+ * @note the process may may be described only by statement in HDL
+ * 		this means that it does not have to have name or sensitivity list
+ * 		specified explicitly
+ * */
+class Process: public WithNameAndDoc {
 public:
-	const char * name = NULL;
-	Position * position = NULL;
+
+	bool sensitivity_list_specified;
+	std::vector<Expr*> sensitivity_list;
+	std::vector<Statement*> statements;
 
 	std::vector<Function*> function_headers;
 	std::vector<Function*> functions;
 	std::vector<Variable*> subtype_headers;
 	std::vector<Variable*> constants;
 	std::vector<Variable*> variables;
-	std::vector<Expr*> sensitivities;
-	std::vector<Statement*> body;
 
 	Process();
-#ifdef USE_PYTHON
-	PyObject * toJson() const;
-#endif
-	void dump(int indent) const;
 	~Process();
 };
+
+}
+}
+
+

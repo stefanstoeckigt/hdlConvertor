@@ -10,15 +10,17 @@
 #include "operatorType.h"
 #include "exprItem.h"
 #include "symbol.h"
-#include "position.h"
-#include "../debugConfig.h"
+#include "named.h"
 
-class Expr {
+namespace hdlConvertor {
+namespace hdlObjects {
+
+class Expr: public WithPos {
 public:
 	ExprItem * data;
-	char * raw = "";
-	Position * position = NULL;
+
 	Expr();
+	// @note deepcopy
 	Expr(const Expr & expr);
 
 	Expr(Expr * op0, OperatorType operatorType, Expr * op1);
@@ -29,13 +31,12 @@ public:
 
 	static Expr * ID(const char * value);
 	static Expr * ID(std::string value);
+
 	static Expr * TYPE_T();
 
 	static Expr * INT(long long val);
-
 	static Expr * INT(std::string strVal, int base);
 	static Expr * INT(const char * strVal, int base);
-
 	static Expr * INT(std::string strVal, int bits, int base);
 	static Expr * INT(const char * strVal, int size, int base);
 
@@ -49,10 +50,12 @@ public:
 	static Expr * OPEN();
 	static Expr * all();
 	static Expr * null();
+
+	// @return char* of the variable string if this Expr is string value
 	char * extractStr();
-#ifdef USE_PYTHON
-	PyObject * toJson() const;
-#endif
-	void dump(int indent) const;
+
 	~Expr();
 };
+
+}
+}

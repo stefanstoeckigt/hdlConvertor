@@ -1,7 +1,10 @@
 #include "entity.h"
 
+namespace hdlConvertor {
+namespace hdlObjects {
+
 Entity::Entity() :
-		Named() {
+		WithNameAndDoc() {
 }
 Port * Entity::getPortByName(const char * name) {
 	for (auto p : ports) {
@@ -9,32 +12,7 @@ Port * Entity::getPortByName(const char * name) {
 		if (strcmp(p->variable->name, name) == 0)
 			return p;
 	}
-	return NULL;
-}
-
-#ifdef USE_PYTHON
-PyObject * Entity::toJson() const {
-	PyObject * d = Named::toJson();
-	addJsonArrP(d, "generics", generics);
-
-	if (position) {
-		JSN_DEBUG("Entity - position")
-		PyDict_SetItemString(d, "position", position->toJson());
-	} else {
-		Py_IncRef (Py_None);
-		PyDict_SetItemString(d, "position", Py_None);
-	}
-	addJsonArrP(d, "ports", ports);
-	return d;
-}
-#endif
-
-void Entity::dump(int indent) const {
-	Named::dump(indent);
-	indent += INDENT_INCR;
-	dumpArrP("generics", indent, generics) << ",\n";
-	dumpArrP("ports", indent, ports) << "\n";
-	mkIndent(indent - INDENT_INCR) << "}";
+	return nullptr;
 }
 
 Entity::~Entity() {
@@ -42,4 +20,7 @@ Entity::~Entity() {
 		delete g;
 	for (auto p : ports)
 		delete p;
+}
+
+}
 }

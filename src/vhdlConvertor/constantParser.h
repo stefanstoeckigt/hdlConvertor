@@ -1,27 +1,20 @@
 #pragma once
 #include <vector>
-#include "../VhdlParser/vhdlParser.h"
-#include "../hdlObjects/context.h"
-#include "../notImplementedLogger.h"
-#include "referenceParser.h"
-#include "../hdlObjects/named.h"
-#include "../hdlObjects/function.h"
+#include "vhdlParser/vhdlParser.h"
 #include "../hdlObjects/variable.h"
-#include "../hdlObjects/packageHeader.h"
 
-#include "compInstanceParser.h"
-#include "exprParser.h"
-#include "entityParser.h"
-#include "interfaceParser.h"
-#include "subProgramDeclarationParser.h"
-#include "processParser.h"
 
-using namespace antlr4;
-using namespace vhdl;
+namespace hdlConvertor {
+namespace vhdl {
 
 class ConstantParser {
 public:
+using Variable = hdlObjects::Variable;
+using vhdlParser = vhdl_antlr::vhdlParser;
 	static std::vector<Variable*> * visitConstant_declaration(
-			vhdlParser::Constant_declarationContext* ctx);		
+			vhdlParser::Constant_declarationContext* ctx);
 
 };
+
+}
+}

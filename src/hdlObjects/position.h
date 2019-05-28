@@ -1,21 +1,25 @@
 #pragma once
+#include <stddef.h>
+#include <limits>
 
-#include <vector>
-#include "jsonable.h"
-#include <assert.h>
-#include "named.h"
+
+namespace hdlConvertor {
+namespace hdlObjects {
 
 class Position {
 public:
+	static constexpr size_t INVALID = std::numeric_limits<size_t>::max();
+
 	size_t startLine;
 	size_t stopLine;
 	size_t startColumn;
 	size_t stopColumn;
 
-Position(size_t startLine, size_t stopLine, size_t startColumn, size_t stopColumn);
-#ifdef USE_PYTHON
-	PyObject * toJson() const;
-#endif
-	void dump(int indent) const;
-	~Position();
+	Position();
+	Position(size_t startLine, size_t stopLine, size_t startColumn,
+			size_t stopColumn);
+	bool isKnown() const;
 };
+
+}
+}

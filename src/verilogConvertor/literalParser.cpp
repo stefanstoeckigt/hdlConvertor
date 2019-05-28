@@ -1,7 +1,13 @@
 #include "literalParser.h"
+#include "../notImplementedLogger.h"
 
-Expr * VerLiteralParser::visitNumber(
-		Verilog2001Parser::NumberContext* ctx) {
+using Verilog2001Parser = Verilog2001_antlr::Verilog2001Parser;
+using namespace hdlConvertor::hdlObjects;
+
+namespace hdlConvertor {
+namespace verilog {
+
+Expr * VerLiteralParser::visitNumber(Verilog2001Parser::NumberContext* ctx) {
 	// number :
 	// Decimal_number
 	// | Octal_number
@@ -29,12 +35,17 @@ Expr * VerLiteralParser::visitNumber(
 	return NULL;
 
 }
-Expr * VerLiteralParser::parseSimple_identifier(
-		antlr4::tree::TerminalNode* n) {
+Expr * VerLiteralParser::parseSimple_identifier(antlr4::tree::TerminalNode* n) {
 	return Expr::ID(n->getText());
 }
-Expr * VerLiteralParser::parseIntNumber(
-		antlr4::tree::TerminalNode* n,
+Expr * VerLiteralParser::parseEscaped_identifier(
+		antlr4::tree::TerminalNode* n) {
+	auto s = n->getText();
+	s = s.substr(1);
+	return Expr::ID(s);
+}
+
+Expr * VerLiteralParser::parseIntNumber(antlr4::tree::TerminalNode* n,
 		int radix) {
 	// Decimal_number :
 	// Unsigned_number
@@ -51,8 +62,8 @@ Expr * VerLiteralParser::parseIntNumber(
 	int size = -1;
 	int valuePartStart = 0;
 
-	int baseStart = s.find('\'', 0);
-	if (baseStart >= 0) {
+	size_t baseStart = s.find('\'', 0);
+	if (baseStart != std::string::npos) {
 		if (baseStart > 0) {
 			s[baseStart] = 0;
 			size = atoi(s.c_str());
@@ -88,4 +99,7 @@ Expr * VerLiteralParser::parseIntNumber(
 Expr * VerLiteralParser::visitString(antlr4::tree::TerminalNode* n) {
 	std::string s = n->getText();
 	return Expr::STR(s.substr(1, s.length() - 2)); // skipping " at the end
+}
+
+}
 }

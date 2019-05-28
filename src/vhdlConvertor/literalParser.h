@@ -1,33 +1,32 @@
 #pragma once
 
-#include <vector>
-#include <stdlib.h>
-#include <algorithm>
-#include <string>
-#include "antlr4-runtime.h"
-#include "../VhdlParser/vhdlParser.h"
-#include "../notImplementedLogger.h"
-#include "../hdlObjects/operatorType.h"
-#include "../hdlObjects/symbol.h"
+#include "vhdlParser/vhdlParser.h"
 #include "../hdlObjects/expr.h"
+#include <antlr4-common.h>
 
-using namespace antlr4;
-using namespace vhdl;
+namespace hdlConvertor {
+namespace vhdl {
 
 class LiteralParser {
-
 public:
+	using Expr = hdlObjects::Expr;
+	using vhdlParser = vhdl_antlr::vhdlParser;
+
 	static Expr * visitLiteral(vhdlParser::LiteralContext* ctx);
-	static Expr * visitNumeric_literal(
-			vhdlParser::Numeric_literalContext* ctx);
-	static Expr * visitPhysical_literal(vhdlParser::Physical_literalContext* ctx);
+	static Expr * visitNumeric_literal(vhdlParser::Numeric_literalContext* ctx);
+	static Expr * visitPhysical_literal(
+			vhdlParser::Physical_literalContext* ctx);
 	static Expr * visitAbstract_literal(
 			vhdlParser::Abstract_literalContext* ctx);
 	static Expr * visitEnumeration_literal(
 			vhdlParser::Enumeration_literalContext* ctx);
-	static Expr * visitSTRING_LITERAL(tree::TerminalNode* n);
-	static Expr * visitCHARACTER_LITERAL(tree::TerminalNode* ctx);
+	static Expr * visitSTRING_LITERAL(antlr4::tree::TerminalNode* n);
+	static Expr * visitCHARACTER_LITERAL(antlr4::tree::TerminalNode* ctx);
 	static Expr * visitIdentifier(vhdlParser::IdentifierContext* ctx);
 	static bool isStrDesignator(vhdlParser::DesignatorContext* ctx);
 	static char * visitDesignator(vhdlParser::DesignatorContext* ctx);
+	static char * visitLabel_colon(vhdlParser::Label_colonContext * ctx);
 };
+
+}
+}

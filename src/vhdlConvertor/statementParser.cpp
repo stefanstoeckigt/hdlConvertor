@@ -1,15 +1,28 @@
 #include "statementParser.h"
+#include "exprParser.h"
+#include "../notImplementedLogger.h"
+#include "literalParser.h"
+#include "referenceParser.h"
 
-std::vector<Statement*> * StatementParser::visitSequence_of_statements(
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using namespace std;
+using vhdlParser = vhdl_antlr::vhdlParser;
+using namespace hdlConvertor::hdlObjects;
+
+
+vector<Statement*> * StatementParser::visitSequence_of_statements(
 		vhdlParser::Sequence_of_statementsContext* ctx) {
 		// sequence_of_statements
 		// : ( sequential_statement )*
-		// ;	
-	std::vector<Statement*> * s = new std::vector<Statement*>();
+		// ;
+	vector<Statement*> * s = new vector<Statement*>();
 	for (auto ss : ctx->sequential_statement()) {
 		auto st = visitSequential_statement(ss);
 		if (st) {
-			st->position = new Position(ss->getStart()->getLine(), ss->getStop()->getLine(), NULL, NULL);
+			st->position = Position(ss->getStart()->getLine(), ss->getStop()->getLine(), -1, -1);
 			s->push_back(st);
 	}
 	}
@@ -39,21 +52,23 @@ Statement * StatementParser::visitSequential_statement(
 	if (ws) {
 		NotImplementedLogger::print(
 				"StatementParser.visitSequential_statement - wait_statement");
-		return Statement::NONE();
+		return nullptr;
 	}
 
 	auto as = ctx->assertion_statement();
 	if (as) {
+		// [todo] convert to regular call
 		NotImplementedLogger::print(
 				"StatementParser.visitSequential_statement - assertion_statement");
-		return Statement::NONE();
+		return nullptr;
 	}
 
 	auto r = ctx->report_statement();
 	if (r) {
+		// [todo] convert to regular call
 		NotImplementedLogger::print(
 				"StatementParser.visitSequential_statement - report_statement");
-		return Statement::NONE();
+		return nullptr;
 	}
 
 	auto sas = ctx->signal_assignment_statement();
@@ -69,55 +84,77 @@ Statement * StatementParser::visitSequential_statement(
 		return visitIf_statement(ifStm);
 
 	auto c = ctx->case_statement();
-	if (c) 
+	if (c)
 		return visitCase_statement(c);
-		
+
 	auto l = ctx->loop_statement();
 	if (l)
 		return visitLoop_statement(l);
 
 	auto ns = ctx->next_statement();
 	if (ns) {
+		// [todo] convert to wait statement
 		NotImplementedLogger::print(
 				"StatementParser.visitSequential_statement - next_statement");
-		return Statement::NONE();
+		return nullptr;
 	}
 
 	auto es = ctx->exit_statement();
 	if (es) {
+		// [todo] convert to regular call
 		NotImplementedLogger::print(
 				"StatementParser.visitSequential_statement - exit_statement");
-		return Statement::NONE();
+		return nullptr;
 	}
 
 	auto rt = ctx->return_statement();
 	if (rt)
 		return visitReturn_statement(rt);
 
+
 	auto nl = ctx->NULL_SYM();
 	if (nl) {
-		NotImplementedLogger::print(
-				"StatementParser.visitSequential_statement - NULL_SYM");
-		return Statement::NONE();
+		return nullptr;
 	}
 
 	auto bs = ctx->break_statement();
 	if (bs) {
-		NotImplementedLogger::print(
-				"StatementParser.visitSequential_statement - break_statement");
-		return Statement::NONE();
+		return Statement::BREAK();
 	}
 
 	auto pcs = ctx->procedure_call_statement();
-	if (pcs) {
-		NotImplementedLogger::print(
-				"StatementParser.visitSequential_statement - procedure_call_statement");
-		return Statement::NONE();
+	assert(pcs);
+	return Statement::EXPR(ExprParser::visitProcedure_call_statement(pcs));
+}
+Statement * StatementParser::visitCase_statement(
+		vhdlParser::Case_statementContext * ctx) {
+	// case_statement
+	//   : ( label_colon )? CASE expression IS
+	//     ( case_statement_alternative )+
+	//     END CASE ( identifier )? SEMI
+	//   ;
+	auto _e = ctx->expression();
+	auto e = ExprParser::visitExpression(_e);
+	vector<Statement::case_t> alternatives;
+	vector<Statement*>* _default = nullptr;
+	for (auto a : ctx->case_statement_alternative()) {
+		// case_statement_alternative
+		//   : WHEN choices ARROW sequence_of_statements
+		//   ;
+		for (auto ch : ExprParser::visitChoices(a->choices())) {
+			auto s = a->sequence_of_statements();
+			auto stms = visitSequence_of_statements(s);
+			if (ch == nullptr) {
+				assert(_default == nullptr);
+				_default = stms;
+			} else {
+				alternatives.push_back( { ch, stms });
+			}
+		}
 	}
-
-	NotImplementedLogger::print(
-			"StatementParser.visitSequential_statement");
-	return Statement::NONE();
+	auto cstm = Statement::CASE(e, alternatives, _default);
+	cstm->position = Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), -1, -1);
+	return cstm;
 }
 
 Statement * StatementParser::visitSignal_assignment_statement(
@@ -139,15 +176,14 @@ Statement * StatementParser::visitSignal_assignment_statement(
 		return visitConditional_signal_assignment(ctx->conditional_signal_assignment());
 	}
 
-	if (ctx->selected_signal_assignment()) {
-		return visitSelected_signal_assignment(ctx->selected_signal_assignment());
-	}
+	assert(ctx->selected_signal_assignment());
+	return visitSelected_signal_assignment(ctx->selected_signal_assignment());
 }
 
 Statement * StatementParser::visitSimple_signal_assignment(
 		vhdlParser::Simple_signal_assignmentContext *ctx) {
 	//simple_signal_assignment
-	//  : simple_waveform_assignment 
+	//  : simple_waveform_assignment
 	//  | simple_force_assignment
 	//  | simple_release_assignment
 	//  ;
@@ -160,16 +196,15 @@ Statement * StatementParser::visitSimple_signal_assignment(
 		return visitSimple_force_assignment(ctx->simple_force_assignment());
 	}
 
-	if (ctx->simple_release_assignment()) {
-		return visitSimple_release_assignment(ctx->simple_release_assignment());
-	}
+	assert(ctx->simple_release_assignment());
+	return visitSimple_release_assignment(ctx->simple_release_assignment());
 }
 
 Statement * StatementParser::visitSimple_waveform_assignment(
 		vhdlParser::Simple_waveform_assignmentContext *ctx) {
 	//simple_waveform_assignment
 	//  : target LE (delay_mechanism)? waveform SEMI
-	//  ;			
+	//  ;
 
 	if (ctx->delay_mechanism())
 		NotImplementedLogger::print(
@@ -203,7 +238,7 @@ Statement *  StatementParser::visitSimple_release_assignment(
 				"StatementParser.visitSimple_release_assignment - force_mode");
 
 	return Statement::ASSIG(ExprParser::visitTarget(ctx->target()),
-			Expr::null());				
+			Expr::null());
 
 }
 
@@ -212,16 +247,16 @@ Statement * StatementParser::visitConditional_signal_assignment(
 		vhdlParser::Conditional_signal_assignmentContext *ctx) {
 	//conditional_signal_assignment
 	//  : conditional_waveform_assignment
-	//  | conditional_force_assignment 
+	//  | conditional_force_assignment
 	//  ;
 
 	if (ctx->conditional_waveform_assignment()) {
 		return visitConditional_waveform_assignment(ctx->conditional_waveform_assignment());
 	}
 
-	if (ctx->conditional_force_assignment()) {
-		return visitConditional_force_assignment(ctx->conditional_force_assignment());
-	}
+	auto cfa = ctx->conditional_force_assignment();
+	assert(cfa);
+	return visitConditional_force_assignment(cfa);
 }
 
 Statement * StatementParser::visitConditional_waveform_assignment(
@@ -235,10 +270,10 @@ Statement * StatementParser::visitConditional_waveform_assignment(
 				"StatementParser.visitConditional_waveform_assignment - delay_mechanism");
 
 	NotImplementedLogger::print(
-		"StatementParser.visitConditional_waveform_assignment - conditional_waveforms");				
+		"StatementParser.visitConditional_waveform_assignment - conditional_waveforms");
 
 	return Statement::ASSIG(ExprParser::visitTarget(ctx->target()),
-			Expr::null());	
+			Expr::null());
 
 }
 
@@ -247,17 +282,17 @@ Statement * StatementParser::visitConditional_force_assignment(
 		vhdlParser::Conditional_force_assignmentContext *ctx) {
 	//conditional_force_assignment
 	//  : target LE FORCE (force_mode)? conditional_expression
-	//  ; 
+	//  ;
 
 	if (ctx->force_mode())
 		NotImplementedLogger::print(
 				"StatementParser.visitConditional_force_assignment - force_mode");
 
 	NotImplementedLogger::print(
-		"StatementParser.visitConditional_force_assignment - conditional_expression");		
+		"StatementParser.visitConditional_force_assignment - conditional_expression");
 
 	return Statement::ASSIG(ExprParser::visitTarget(ctx->target()),
-			Expr::null());	
+			Expr::null());
 
 }
 
@@ -270,7 +305,7 @@ Statement * StatementParser::visitSelected_signal_assignment(
 	NotImplementedLogger::print(
 				"StatementParser.visitSelected_signal_assignment");
 
-	return Statement::NONE();
+	return nullptr;
 }
 
 
@@ -293,15 +328,14 @@ Statement * StatementParser::visitVariable_assignment_statement(
 		return visitConditional_variable_assignment(ctx->conditional_variable_assignment());
 	}
 
-	if (ctx->selected_variable_assignment()) {
-		return visitSelected_variable_assignment(ctx->selected_variable_assignment());
-	}
+	assert(ctx->selected_variable_assignment());
+	return visitSelected_variable_assignment(ctx->selected_variable_assignment());
 }
 
 Statement * StatementParser::visitSimple_variable_assignment(
 		vhdlParser::Simple_variable_assignmentContext *ctx) {
-	//simple_variable_assignment 
-	//  : target VARASGN expression SEMI  
+	//simple_variable_assignment
+	//  : target VARASGN expression SEMI
 	//  ;
 
 	return Statement::ASSIG(ExprParser::visitTarget(ctx->target()),
@@ -315,7 +349,7 @@ Statement * StatementParser::visitConditional_variable_assignment(
 	//  ;
 
 	NotImplementedLogger::print(
-		"StatementParser.visitConditional_variable_assignment - conditional_expression");	
+		"StatementParser.visitConditional_variable_assignment - conditional_expression");
 
 	return Statement::ASSIG(ExprParser::visitTarget(ctx->target()),
 			Expr::null());
@@ -349,43 +383,27 @@ Statement * StatementParser::visitIf_statement(
 		NotImplementedLogger::print(
 				"StatementParser.visitIf_statement - label_colon");
 
-	std::vector<Statement*> * ifStates = new std::vector<Statement*>();
-
 	auto c = ctx->condition();
 	auto cIt = c.begin();
 	auto s = ctx->sequence_of_statements();
 	auto sIt = s.begin();
 
-	while (sIt != s.end()) {
-		
-		if (sIt == s.begin()) {
-			Expr * cond = visitCondition(*cIt);
-			std::vector<Statement*> * ifState = visitSequence_of_statements(*sIt);
-			auto ifS = Statement::IF(cond, ifState);
-			ifS->position = new Position((*sIt)->getStart()->getLine(), (*sIt)->getStop()->getLine(), NULL, NULL);
-			ifStates->push_back(ifS);
-			++cIt;
-			++sIt;
-		} else if (cIt == c.end() && ctx->ELSE()) {
-			std::vector<Statement*> * ifState = visitSequence_of_statements(*sIt);
-			auto elseS = Statement::ELSE(ifState);
-			elseS->position = new Position((*sIt)->getStart()->getLine(), (*sIt)->getStop()->getLine(), NULL, NULL);
-			ifStates->push_back(elseS);
-			++sIt;
-		} else {
-			Expr * cond = visitCondition(*cIt);
-			std::vector<Statement*> * ifState = visitSequence_of_statements(*sIt);
-			auto elsifS = Statement::ELSIF(cond, ifState);
-			elsifS->position = new Position((*sIt)->getStart()->getLine(), (*sIt)->getStop()->getLine(), NULL, NULL);
-			ifStates->push_back(elsifS);
-			++cIt;
-			++sIt;
-		} 		
-	} 
-
-	auto ifS = Statement::IFBODY(ifStates);
-	ifS->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
-	return ifS;
+	Expr * cond = visitCondition(*cIt);
+	++cIt;
+	if (cIt != c.end()) {
+		NotImplementedLogger::print(
+				"StatementParser.visitIf_statement - ELSIF");
+	}
+	vector<Statement*> * ifTrue = visitSequence_of_statements(*sIt);
+	++sIt;
+	Statement * ifStm = nullptr;
+	if (sIt != s.end()) {
+		ifStm = Statement::IF(cond, ifTrue, visitSequence_of_statements(*sIt));
+	} else {
+		ifStm = Statement::IF(cond, ifTrue);
+	}
+	ifStm->position = Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), -1, -1);
+	return ifStm;
 }
 
 Statement * StatementParser::visitReturn_statement(
@@ -420,23 +438,26 @@ Statement * StatementParser::visitLoop_statement(
 	}
 
 	Statement * loop;
-	if (ctx->iteration_scheme())
+	auto is = ctx->iteration_scheme();
+	if (is) {
 		// iteration_scheme
 		// : WHILE condition
 		// | FOR parameter_specification
 		// ;
 		if (ctx->iteration_scheme()->WHILE()) {
-			loop = Statement::WHILE(visitCondition(ctx->iteration_scheme()->condition()), 
+			loop = Statement::WHILE(visitCondition(is->condition()),
 					visitSequence_of_statements(ctx->sequence_of_statements()));
 		} else {
-			loop = Statement::FOR(visitParameter_specification(ctx->iteration_scheme()->parameter_specification()), 
+			auto args = visitParameter_specification(is->parameter_specification());
+			loop = Statement::FOR(*args,
 					visitSequence_of_statements(ctx->sequence_of_statements()));
+			delete args;
 		}
-	else {
+	} else {
 		loop = Statement::WHILE(Expr::ID("True"),
 				visitSequence_of_statements(ctx->sequence_of_statements()));
 	}
-	loop->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
+	loop->position = Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), -1, -1);
 	return loop;
 }
 
@@ -447,53 +468,22 @@ Expr* StatementParser::visitCondition(vhdlParser::ConditionContext* ctx) {
 	return ExprParser::visitExpression(ctx->expression());
 }
 
-std::vector<Expr*> * StatementParser::visitParameter_specification(
+vector<Expr*> * StatementParser::visitParameter_specification(
 		vhdlParser::Parameter_specificationContext *ctx) {
 	//parameter_specification
 	//  : identifier IN discrete_range
 	//  ;
-	std::vector<Expr*> * e = new std::vector<Expr*>();
+	vector<Expr*> * e = new vector<Expr*>();
 	e->push_back(LiteralParser::visitIdentifier(ctx->identifier()));
 	e->push_back(ExprParser::visitDiscrete_range(ctx->discrete_range()));
 	return e;
 }
 
-Statement * StatementParser::visitCase_statement(
-		vhdlParser::Case_statementContext* ctx) {
-		//case_statement
-		//  : ( label_colon )? CASE expression IS
-		//    ( case_statement_alternative )+
-		//    END CASE ( identifier )? SEMI
-		//  ;
-	if (ctx->label_colon()) {
-		NotImplementedLogger::print(
-				"StatementParser.case_statement - label_colon");
-	}
-	
-	std::vector<Statement*> * cas = new std::vector<Statement*>();
-	for (auto ca : ctx->case_statement_alternative()) {
-		cas->push_back(visitCase_statement_alternative(ca));
-	}
-
-	auto e = ctx->expression();
-	return Statement::CASE(ExprParser::visitExpression(e), cas);
-}
-
-Statement * StatementParser::visitCase_statement_alternative(
-		vhdlParser::Case_statement_alternativeContext* ctx) {
-		//case_statement_alternative
-		//  : WHEN choices ARROW sequence_of_statements
-		//  ;
-
-	return Statement::CASE(visitChoices(ctx->choices()), 
-				visitSequence_of_statements(ctx->sequence_of_statements()));
-}
-
-std::vector<Expr*> * StatementParser::visitChoices(vhdlParser::ChoicesContext *ctx) {
+vector<Expr*> * StatementParser::visitChoices(vhdlParser::ChoicesContext *ctx) {
 		//choices
 		//	: choice ( BAR choice )*
 		//	;
-	std::vector<Expr*> * cs = new std::vector<Expr*>();
+	vector<Expr*> * cs = new vector<Expr*>();
 	for (auto c : ctx->choice()) {
 		cs->push_back(visitChoice(c));
 	}
@@ -501,23 +491,91 @@ std::vector<Expr*> * StatementParser::visitChoices(vhdlParser::ChoicesContext *c
 }
 
 Expr * StatementParser::visitChoice(vhdlParser::ChoiceContext *ctx) {
-		//choice
-		//  : identifier
-		//  | discrete_range
-		//  | simple_expression
-		//  | OTHERS
-		//  ;
-	
+	//choice
+	//  : identifier
+	//  | discrete_range
+	//  | simple_expression
+	//  | OTHERS
+	//  ;
+
 	if (ctx->identifier())
-		return LiteralParser::visitIdentifier(ctx->identifier());	
-	
+		return LiteralParser::visitIdentifier(ctx->identifier());
+
 	if (ctx->discrete_range())
-		return ExprParser::visitDiscrete_range(ctx->discrete_range());	
-	
+		return ExprParser::visitDiscrete_range(ctx->discrete_range());
+
 	if  (ctx->simple_expression())
 		return ExprParser::visitSimple_expression(ctx->simple_expression());
 
-	if (ctx->OTHERS())
-		return Expr::null();	
-		
+	assert(ctx->OTHERS());
+	return Expr::null();
+}
+
+Statement * StatementParser::visitProcess_statement(
+		vhdlParser::Process_statementContext * ctx) {
+	// process_statement
+	//   : ( label_colon )? ( POSTPONED )? PROCESS
+	//     ( LPAREN sensitivity_list RPAREN )? ( IS )?
+	//     process_declarative_part
+	//     BEGIN
+	//     process_statement_part
+	//     END ( POSTPONED )? PROCESS ( identifier )? SEMI
+	//   ;
+	string name;
+	auto lc = ctx->label_colon();
+	auto sensitivity_list = new vector<Expr*>;
+	auto stms = new vector<Statement*>;
+	if (lc) {
+		char * _name = LiteralParser::visitLabel_colon(lc);
+		name = _name;
+		free(_name);
+	}
+	if (ctx->POSTPONED().size()) {
+		NotImplementedLogger::print(
+				"StatementParser.visitProcess_statement - POSTPONED");
+	}
+	auto sl = ctx->sensitivity_list();
+	if (sl) {
+		visitSensitivity_list(sl, *sensitivity_list);
+	}
+	auto declr = ctx->process_declarative_part();
+	visitProcess_declarative_part(declr);
+	visitProcess_statement_part(ctx->process_statement_part(), *stms);
+
+	auto p = Statement::PROCESS(sensitivity_list, stms);
+	p->label = name;
+	return p;
+}
+void StatementParser::visitSensitivity_list(
+		vhdlParser::Sensitivity_listContext * ctx, vector<Expr*> & res) {
+	// sensitivity_list
+	//   : name ( COMMA name )*
+	//   ;
+	for (auto n : ctx->name()) {
+		res.push_back(ReferenceParser::visitName(n));
+	}
+}
+vector<Variable*> StatementParser::visitProcess_declarative_part(
+		vhdlParser::Process_declarative_partContext * ctx) {
+	//process_declarative_part
+	//  : ( process_declarative_item )*
+	//  ;
+	for (auto i : ctx->process_declarative_item()) {
+		NotImplementedLogger::print(
+				"StatementParser.visitProcess_declarative_part - process_declarative_item");
+	}
+	return {};
+}
+void StatementParser::visitProcess_statement_part(
+		vhdlParser::Process_statement_partContext * ctx,
+		vector<Statement*> & stms) {
+	//process_statement_part
+	//  : ( sequential_statement )*
+	//  ;
+	for (auto s : ctx->sequential_statement()) {
+		stms.push_back(visitSequential_statement(s));
+	}
+}
+
+}
 }

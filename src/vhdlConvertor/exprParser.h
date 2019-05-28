@@ -1,26 +1,21 @@
 #pragma once
 
 #include <vector>
-#include "antlr4-runtime.h"
-#include "../VhdlParser/vhdlParser.h"
-#include "../notImplementedLogger.h"
-#include "../hdlObjects/operatorType.h"
-#include "../hdlObjects/symbolType.h"
+#include "vhdlParser/vhdlParser.h"
 #include "../hdlObjects/expr.h"
 
-#include "literalParser.h"
-#include "referenceParser.h"
-#include "operatoTypeParser.h"
-
-using namespace antlr4;
-using namespace vhdl;
+namespace hdlConvertor {
+namespace vhdl {
 
 class ExprParser {
 public:
+	using Expr = hdlObjects::Expr;
+	using vhdlParser = vhdl_antlr::vhdlParser;
+
 	static std::vector<Expr*> * visitActual_parameter_part(
 			vhdlParser::Actual_parameter_partContext* ctx);
-	static 	std::vector<Expr*> * visitAssociation_list(
-			vhdlParser::Association_listContext *ctx);			
+	static std::vector<Expr*> * visitAssociation_list(
+			vhdlParser::Association_listContext *ctx);
 	static Expr* visitAssociation_element(
 			vhdlParser::Association_elementContext* ctx);
 	static Expr* visitFormal_part(vhdlParser::Formal_partContext* ctx);
@@ -31,8 +26,7 @@ public:
 			vhdlParser::Actual_designatorContext* ctx);
 	static Expr* visitSubtype_indication(
 			vhdlParser::Subtype_indicationContext* ctx);
-	static Expr* visitConstraint(
-			vhdlParser::Selected_nameContext * selectedName,
+	static Expr* visitConstraint(Expr * selectedName,
 			vhdlParser::ConstraintContext* ctx);
 	static Expr* visitIndex_constraint(
 			vhdlParser::Index_constraintContext* ctx);
@@ -58,4 +52,16 @@ public:
 	static Expr* visitWaveform(vhdlParser::WaveformContext* ctx);
 	static Expr* visitWaveform_element(
 			vhdlParser::Waveform_elementContext* ctx);
+	/*
+	 * @return expression if specified else nullptr for "others" the vhdl keyword
+	 * */
+	static Expr * visitChoice(vhdlParser::ChoiceContext * ctx);
+	static std::vector<Expr *> visitChoices(vhdlParser::ChoicesContext * ctx);
+
+	static Expr * visitProcedure_call_statement(
+			vhdlParser::Procedure_call_statementContext * ctx);
+	static Expr * visitProcedure_call(vhdlParser::Procedure_callContext * ctx);
 };
+
+}
+}

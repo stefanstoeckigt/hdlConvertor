@@ -2,17 +2,19 @@
 
 #include "named.h"
 #include "expr.h"
-#include <memory>
 
-class Variable: public Named {
+namespace hdlConvertor {
+namespace hdlObjects {
+
+class Variable: public WithNameAndDoc {
 public:
-	std::shared_ptr<Expr> type;
+	Expr * type;
 	Expr * value;
+	bool latched;
 
-	Variable(std::string id, const std::shared_ptr<Expr> & type, Expr * val);
-#ifdef USE_PYTHON
-	PyObject * toJson() const;
-#endif
-	void dump(int indent) const;
+	Variable(std::string id, Expr * type, Expr * val);
 	~Variable();
 };
+
+}
+}

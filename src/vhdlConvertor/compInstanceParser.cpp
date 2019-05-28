@@ -1,5 +1,16 @@
 #include "compInstanceParser.h"
 
+#include "../notImplementedLogger.h"
+#include "literalParser.h"
+#include "referenceParser.h"
+#include "exprParser.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using vhdlParser = vhdl_antlr::vhdlParser;
+using namespace hdlConvertor::hdlObjects;
+
 CompInstance * CompInstanceParser::visitComponent_instantiation_statement(
 		vhdlParser::Component_instantiation_statementContext * ctx) {
 	// component_instantiation_statement
@@ -7,10 +18,12 @@ CompInstance * CompInstanceParser::visitComponent_instantiation_statement(
 	// ( generic_map_aspect )?
 	// ( port_map_aspect )? SEMI
 	// ;
-	char * name = visitLabel_colon(ctx->label_colon());
+	char * name = LiteralParser::visitLabel_colon(ctx->label_colon());
 	CompInstance * ci = visitInstantiated_unit(ctx->instantiated_unit());
-	ci->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
-	ci->name = name;
+	ci->name = Expr::ID(name);
+	ci->position.startLine = ctx->getStart()->getLine(), ci->position.startColumn =
+			ctx->getStop()->getLine();
+
 	auto gma = ctx->generic_map_aspect();
 	if (gma) {
 		std::vector<Expr*> * gmas = visitGeneric_map_aspect(gma);
@@ -27,7 +40,6 @@ CompInstance * CompInstanceParser::visitComponent_instantiation_statement(
 		}
 		delete pmas;
 	}
-
 
 	return ci;
 }
@@ -75,6 +87,9 @@ std::vector<Expr*> * CompInstanceParser::visitPort_map_aspect(
 	//port_map_aspect
 	//  : PORT MAP LPAREN association_list RPAREN
 	//  ;
-	
+
 	return ExprParser::visitAssociation_list(ctx->association_list());
+}
+
+}
 }

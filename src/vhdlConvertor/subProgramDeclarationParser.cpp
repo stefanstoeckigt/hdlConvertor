@@ -1,4 +1,16 @@
 #include "subProgramDeclarationParser.h"
+#include "literalParser.h"
+#include "exprParser.h"
+#include "notImplementedLogger.h"
+#include "interfaceParser.h"
+#include "variableParser.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using namespace hdlConvertor::hdlObjects;
+using vhdlParser = vhdl_antlr::vhdlParser;
+
 
 Function * SubProgramDeclarationParser::visitSubprogram_declaration(
 		vhdlParser::Subprogram_declarationContext* ctx) {
@@ -113,49 +125,49 @@ auto sp = ctx->subprogram_declaration();
 	if (sb) {
 		//SubProgramParser::visitSubprogram_body(sb);
 		NotImplementedLogger::print(
-				"PackageParser.visitSubprogram_body");		
+				"PackageParser.visitSubprogram_body");
 	}
     auto td = ctx->type_declaration();
 	if (td) {
 		NotImplementedLogger::print(
-				"PackageParser.visitType_declaration");      
+				"PackageParser.visitType_declaration");
 	}
     auto st = ctx->subtype_declaration();
 	if (st) {
 		//SubtypeDeclarationParser::visitSubtype_declaration(st);
-		
+
 		NotImplementedLogger::print(
-				"PackageParser.visitSubtype_declaration");	       
+				"PackageParser.visitSubtype_declaration");
 	}
     auto constd = ctx->constant_declaration();
 	if (constd) {
 		// ConstantParser::visitConstant_declaration(constd);
 		NotImplementedLogger::print(
 				"PackageParser.visitConstant_declaration");
-	}    
+	}
 	auto vd = ctx->variable_declaration();
 	if (vd) {
-		return VariableParser::visitVariable_declaration(vd);      
+		return VariableParser::visitVariable_declaration(vd);
 	}
 	auto fd = ctx->file_declaration();
 	if (fd) {
 		NotImplementedLogger::print(
-				"PackageParser.visitFile_declaration");       
+				"PackageParser.visitFile_declaration");
 	}
 	auto aliasd = ctx->alias_declaration();
 	if (aliasd) {
 		NotImplementedLogger::print(
-				"PackageParser.visitAlias_declaration");       
+				"PackageParser.visitAlias_declaration");
 	}
     auto atrd = ctx->attribute_declaration();
 	if (atrd) {
 		NotImplementedLogger::print(
-				"PackageParser.visitAttribute_declaration");       
+				"PackageParser.visitAttribute_declaration");
 	}
 	auto as = ctx->attribute_specification();
 	if (as) {
 		NotImplementedLogger::print(
-				"PackageParser.visitAttribute_specification");   
+				"PackageParser.visitAttribute_specification");
 	}
     auto uc = ctx->use_clause();
 	if (uc) {
@@ -164,15 +176,18 @@ auto sp = ctx->subprogram_declaration();
 	auto gtd = ctx->group_template_declaration();
 	if (gtd) {
 		NotImplementedLogger::print(
-				"PackageParser.visitGroup_template_declaration");       
+				"PackageParser.visitGroup_template_declaration");
 	}
 	auto gd = ctx->group_declaration();
 	if (gd) {
 		NotImplementedLogger::print(
-				"PackageParser.visitGroup_declaration");       
+				"PackageParser.visitGroup_declaration");
 	}
 
 	NotImplementedLogger::print(
 			"SubProgramParser.visitSubprogram_declarative_item");
 	return new std::vector<Variable*>();
+}
+
+}
 }

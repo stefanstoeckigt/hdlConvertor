@@ -1737,7 +1737,7 @@ UPPER_CASE_LETTER
 
 COMMENT
   : '--' ( ~'\n' )*
-  -> skip
+  -> channel(HIDDEN)
   ;
 
 TAB

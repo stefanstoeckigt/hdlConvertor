@@ -5,38 +5,25 @@
 #include <functional>
 
 #include "hdlObjects/context.h"
-#include "antlr4-runtime.h"
+#include "syntaxErrorLogger.h"
+#include <antlr4-runtime.h>
 
-using namespace antlr4;
-using namespace vhdl;
-
-enum ParserErrors {
-	PERR_OK = 0, PERR_FILE, PARSING_ERR, CONVERTING_ERR
-};
-
-inline bool file_exists(const char * name) {
-	if (FILE *file = fopen(name, "r")) {
-		fclose(file);
-		return true;
-	} else {
-		return false;
-	}
-}
+namespace hdlConvertor {
 
 template<class antlrLexerT, class antlrParserT, class hdlParserT>
 class ParserContainer {
-	ANTLRErrorListener * syntaxErrLogger;
+	SyntaxErrorLogger * syntaxErrLogger;
 	antlrLexerT * lexer;
-	CommonTokenStream * tokens;
+	antlr4::CommonTokenStream * tokens;
 	antlrParserT * antlrParser;
 	hdlParserT * hdlParser;
 
-	void initParser(ANTLRFileStream * input) {
+	void initParser(antlr4::ANTLRInputStream &input) {
 		// create a lexer that feeds off of input CharStream
-		lexer = new antlrLexerT(input);
+		lexer = new antlrLexerT(&input);
 
 		// create a buffer of tokens pulled from the lexer
-		tokens = new CommonTokenStream(lexer);
+		tokens = new antlr4::CommonTokenStream(lexer);
 
 		// create a parser that feeds off the tokens buffer
 		antlrParser = new antlrParserT(tokens);
@@ -46,33 +33,41 @@ class ParserContainer {
 		antlrParser->addErrorListener(syntaxErrLogger);
 	}
 public:
-	Context * context;
-	ParserErrors parseFile(
-			const char * fileName,
+	/*
+	 * :param context: if context is nullptr new context is generated
+	 *                 otherwise specified context is used
+	 * */
+	ParserContainer(hdlObjects::Context * context):
+		syntaxErrLogger(nullptr), lexer(nullptr), tokens(nullptr),
+		antlrParser(nullptr), hdlParser(nullptr), context(context) {
+	}
+	hdlObjects::Context * context;
+	void parseFile(
+			antlr4::ANTLRInputStream &fileName,
 			bool hierarchyOnly,
 			bool debug,
 			std::function<
-					void(antlrParserT * antlrParser, hdlParserT * hdlParser)> parseFn) {
-		// create a CharStream that reads from standard input
-		if (!file_exists(fileName))
-			return PERR_FILE;
+					void(
+						antlrParserT * antlrParser,
+						hdlParserT * hdlParser
+					    )
+				     > parseFn) {
 
-		ANTLRFileStream * input = new ANTLRFileStream(fileName);
-		initParser(input);
+		initParser(fileName);
 
-		hdlParser = new hdlParserT(hierarchyOnly);
+		hdlParser = new hdlParserT(antlrParser->getTokenStream(), context, hierarchyOnly);
 
 		// begin parsing at init rule
 		parseFn(antlrParser, hdlParser);
 
 		context = hdlParser->getContext();
+		syntaxErrLogger->CheckErrors(); // Throw exception if errors
 		delete hdlParser;
 		delete syntaxErrLogger;
 		delete antlrParser;
 		delete tokens;
 		delete lexer;
-		delete input;
-
-		return PERR_OK;
 	}
 };
+
+}

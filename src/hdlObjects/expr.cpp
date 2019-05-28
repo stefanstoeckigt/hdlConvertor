@@ -2,6 +2,9 @@
 #include "symbol.h"
 #include "operator.h"
 
+namespace hdlConvertor {
+namespace hdlObjects {
+
 LiteralVal __v = { NULL };
 static Symbol Type_t(symbol_T, __v); // symbol representing that expr is type of type;
 
@@ -10,7 +13,11 @@ Expr::Expr() {
 }
 
 Expr::Expr(const Expr & expr) {
-	data = expr.data->clone();
+	if (expr.data == nullptr || expr.data == &Type_t) {
+		data = expr.data;
+	} else {
+		data = expr.data->clone();
+	}
 }
 
 Expr::Expr(Expr * op0, OperatorType operatorType, Expr * op1) {
@@ -131,60 +138,12 @@ Expr * Expr::null() {
 char * Expr::extractStr() {
 	Symbol * literal = dynamic_cast<Symbol*>(data);
 	return literal->value._str;
-
 }
 
 Expr::~Expr() {
 	if (data && data != &Type_t)
 		delete data;
 }
-#ifdef USE_PYTHON
-PyObject * Expr::toJson() const {
-	PyObject *d = PyDict_New();
-	Operator * op = dynamic_cast<Operator*>(data);
 
-	if (strlen(raw) != 0) {	
-		PyDict_SetItemString(d, "raw", PyUnicode_FromString(raw));
-	} else {
-		Py_IncRef (Py_None);
-		PyDict_SetItemString(d, "raw", Py_None);
-	}
-
-
-	if (position) {
-		JSN_DEBUG("Process - position")
-		PyDict_SetItemString(d, "position", position->toJson());
-	} else {
-		Py_IncRef (Py_None);
-		PyDict_SetItemString(d, "position", Py_None);
-	}
-
-	if (op) {
-		PyDict_SetItemString(d, "binOperator", op->toJson());
-	} else {
-		Symbol * literal = dynamic_cast<Symbol*>(data);
-		if (literal)
-			PyDict_SetItemString(d, "literal", literal->toJson());
-		else if (data)
-			throw "Expr is improperly initialized";
-		else
-			throw "Expr has NULL data";
-	}
-	//Py_INCREF(d);
-	return d;
 }
-#endif
-void Expr::dump(int indent) const {
-	Operator * op = dynamic_cast<Operator*>(data);
-	std::cout << "{\n";
-	if (op) {
-		dumpItemP("binOperator", indent + INDENT_INCR, op) << "\n";
-	} else {
-		Symbol * literal = dynamic_cast<Symbol*>(data);
-		if (literal) {
-			dumpItemP("literal", indent + INDENT_INCR, literal) << "\n";
-		} else
-			throw "Expr is improperly initialized";
-	}
-	mkIndent(indent) << "}";
 }

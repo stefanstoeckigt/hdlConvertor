@@ -1,7 +1,16 @@
 #include "variableParser.h"
 
+#include "interfaceParser.h"
+
+#include "../notImplementedLogger.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using namespace hdlConvertor::hdlObjects;
+
 std::vector<Variable*> * VariableParser::visitVariable_declaration(
-		vhdlParser::Variable_declarationContext *ctx) {	
+		vhdlParser::Variable_declarationContext *ctx) {
 	// variable_declaration :
 	// ( SHARED )? VARIABLE identifier_list COLON
 	// subtype_indication ( VARASGN expression )? SEMI
@@ -16,4 +25,7 @@ std::vector<Variable*> * VariableParser::visitVariable_declaration(
 			ctx->expression());
 
 	return vl;
+}
+
+}
 }

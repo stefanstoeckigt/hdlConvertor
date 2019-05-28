@@ -1,96 +1,120 @@
 #include "generateStatementParser.h"
 
+#include "compInstanceParser.h"
+#include "constantParser.h"
+#include "entityParser.h"
+#include "exprParser.h"
+#include "interfaceParser.h"
+#include "literalParser.h"
+#include "referenceParser.h"
+#include "referenceParser.h"
+#include "signalParser.h"
+#include "statementParser.h"
+#include "subProgramDeclarationParser.h"
+#include "subProgramParser.h"
+#include "subtypeDeclarationParser.h"
+#include "variableParser.h"
+#include "notImplementedLogger.h"
+#include "processParser.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using namespace hdlConvertor::hdlObjects;
+using vhdlParser = vhdl_antlr::vhdlParser;
+
 Generate * GenerateStatementParser::visitGenerate_statement(
-        vhdlParser::Generate_statementContext *ctx) {
-    //generate_statement
-    //  : for_generate_statement
-    //  | if_generate_statement
-    //  | case_generate_statement
-    //  ;
+		vhdlParser::Generate_statementContext *ctx) {
+	//generate_statement
+	//  : for_generate_statement
+	//  | if_generate_statement
+	//  | case_generate_statement
+	//  ;
 
-    auto fgs = ctx->for_generate_statement();
-    if (fgs) {
-        return visitFor_generate_statement(fgs);
-    }
+	auto fgs = ctx->for_generate_statement();
+	if (fgs) {
+		return visitFor_generate_statement(fgs);
+	}
 
-    auto ifs = ctx->if_generate_statement();
-    if (ifs) {
-        return visitIf_generate_statement(ifs);
-    }
+	auto ifs = ctx->if_generate_statement();
+	if (ifs) {
+		return visitIf_generate_statement(ifs);
+	}
 
-    auto cgs = ctx->case_generate_statement();
-    if (cgs) {
-        return visitCase_generate_statement(cgs);
-    }
+	auto cgs = ctx->case_generate_statement();
+	assert(cgs);
+	return visitCase_generate_statement(cgs);
 
 }
 
 Generate * GenerateStatementParser::visitFor_generate_statement(
-        vhdlParser::For_generate_statementContext *ctx) {
-    //for_generate_statement
-    //  : label_colon FOR parameter_specification
-    //    GENERATE
-    //    generate_statement_body
-    //    END GENERATE ( identifier )? SEMI
-    //  ;             
+		vhdlParser::For_generate_statementContext *ctx) {
+	//for_generate_statement
+	//  : label_colon FOR parameter_specification
+	//    GENERATE
+	//    generate_statement_body
+	//    END GENERATE ( identifier )? SEMI
+	//  ;
 
-    Generate * g = new Generate();
-    g->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
-    g->type = g_FOR;
+	Generate * g = new Generate();
+	g->position.startLine = ctx->getStart()->getLine();
+	g->position.startColumn = ctx->getStop()->getLine();
+	g->type = g_FOR;
 
-    g->name = visitLabel_colon(ctx->label_colon()); 
-    visitGenerate_statement_body(ctx->generate_statement_body(), g);
+	g->name = visitLabel_colon(ctx->label_colon());
+	visitGenerate_statement_body(ctx->generate_statement_body(), g);
 
-    return g;
+	return g;
 }
 
 Generate * GenerateStatementParser::visitIf_generate_statement(
-        vhdlParser::If_generate_statementContext *ctx) {
-    //if_generate_statement
-    //  : ( label_colon )? IF condition GENERATE
-    //    generate_statement_body
-    //    ( ELSIF condition GENERATE generate_statement_body )*
-    //    ( ELSE GENERATE generate_statement_body)?
-    //    END GENERATE ( identifier )? SEMI
-    //  ;
+		vhdlParser::If_generate_statementContext *ctx) {
+	//if_generate_statement
+	//  : ( label_colon )? IF condition GENERATE
+	//    generate_statement_body
+	//    ( ELSIF condition GENERATE generate_statement_body )*
+	//    ( ELSE GENERATE generate_statement_body)?
+	//    END GENERATE ( identifier )? SEMI
+	//  ;
 
-    Generate * g = new Generate();
-    g->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
-    g->type = g_IF;
+	Generate * g = new Generate();
+	g->position.startLine = ctx->getStart()->getLine();
+	g->position.startColumn = ctx->getStop()->getLine();
+	g->type = g_IF;
 
-    if (ctx->label_colon()) {  
-        g->name = visitLabel_colon(ctx->label_colon());      
-    }
-
-    for (auto gbs : ctx->generate_statement_body()) {
-        visitGenerate_statement_body(gbs, g);
+	if (ctx->label_colon()) {
+		g->name = visitLabel_colon(ctx->label_colon());
 	}
 
-    return g;
+	for (auto gbs : ctx->generate_statement_body()) {
+		visitGenerate_statement_body(gbs, g);
+	}
+
+	return g;
 
 }
 
 Generate * GenerateStatementParser::visitCase_generate_statement(
-        vhdlParser::Case_generate_statementContext *ctx) {
-    //case_generate_statement
-    //  : ( label_colon )? CASE expression GENERATE
-    //    ( case_generate_alternative )+ 
-    //    END GENERATE ( identifier )? SEMI
-    //  ;
+		vhdlParser::Case_generate_statementContext *ctx) {
+	//case_generate_statement
+	//  : ( label_colon )? CASE expression GENERATE
+	//    ( case_generate_alternative )+
+	//    END GENERATE ( identifier )? SEMI
+	//  ;
 
-    Generate * g = new Generate();
-    g->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
-    g->type = g_CASE;
+	Generate * g = new Generate();
+	g->position = Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), -1, -1);
+	g->type = g_CASE;
 
-    if (ctx->label_colon()) {  
-        g->name = visitLabel_colon(ctx->label_colon());      
-    }
-
-    for (auto cga : ctx->case_generate_alternative()) {
-        visitCase_generate_alternative(cga, g);
+	if (ctx->label_colon()) {
+		g->name = visitLabel_colon(ctx->label_colon());
 	}
 
-    return g;
+	for (auto cga : ctx->case_generate_alternative()) {
+		visitCase_generate_alternative(cga, g);
+	}
+
+	return g;
 }
 
 char * GenerateStatementParser::visitLabel_colon(
@@ -105,21 +129,21 @@ char * GenerateStatementParser::visitLabel_colon(
 }
 
 void GenerateStatementParser::visitCase_generate_alternative(
-        vhdlParser::Case_generate_alternativeContext *ctx, Generate * g) {
-    //case_generate_alternative
-    //  : WHEN choices ARROW generate_statement_body
-    //  ;
+		vhdlParser::Case_generate_alternativeContext *ctx, Generate * g) {
+	//case_generate_alternative
+	//  : WHEN choices ARROW generate_statement_body
+	//  ;
 
-    visitGenerate_statement_body(ctx->generate_statement_body(), g);
+	visitGenerate_statement_body(ctx->generate_statement_body(), g);
 
 }
 
 void GenerateStatementParser::visitGenerate_statement_body(
-        vhdlParser::Generate_statement_bodyContext *ctx, Generate * g) {
-    //generate_statement_body
-    //  : ( ( block_declarative_item )* BEGIN )?
-    //    ( architecture_statement )*
-    //  ;
+		vhdlParser::Generate_statement_bodyContext *ctx, Generate * g) {
+	//generate_statement_body
+	//  : ( ( block_declarative_item )* BEGIN )?
+	//    ( architecture_statement )*
+	//  ;
 	for (auto bi : ctx->block_declarative_item()) {
 		// architecture_declarative_part
 		// : ( block_declarative_item )*
@@ -127,9 +151,8 @@ void GenerateStatementParser::visitGenerate_statement_body(
 		visitBlock_declarative_item(bi, g);
 	}
 
-
 	for (auto as : ctx->architecture_statement()) {
-        visitArchitecture_statement(as, g);
+		visitArchitecture_statement(as, g);
 	}
 
 }
@@ -162,8 +185,9 @@ void GenerateStatementParser::visitBlock_declarative_item(
 	// ;
 	auto sp = ctx->subprogram_declaration();
 	if (sp) {
-		g->function_headers.push_back(SubProgramDeclarationParser::visitSubprogram_declaration(sp));
-		return;	
+		g->function_headers.push_back(
+				SubProgramDeclarationParser::visitSubprogram_declaration(sp));
+		return;
 	}
 	auto sb = ctx->subprogram_body();
 	if (sb) {
@@ -171,20 +195,20 @@ void GenerateStatementParser::visitBlock_declarative_item(
 		//Function * f = SubProgramParser::visitSubprogram_body(sb);
 		//a->functions.push_back(f);
 		NotImplementedLogger::print(
-				"GenerateStatementParser.visitSubprogram_body");	
+				"GenerateStatementParser.visitSubprogram_body");
 		return;
 	}
 	auto td = ctx->type_declaration();
 	if (td) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitType_declaration");
-		return;			
+		return;
 	}
 	auto st = ctx->subtype_declaration();
 	if (st) {
 		auto _st = SubtypeDeclarationParser::visitSubtype_declaration(st);
 		g->subtype_headers.push_back(_st);
-		return;	
+		return;
 	}
 	auto constd = ctx->constant_declaration();
 	if (constd) {
@@ -193,7 +217,7 @@ void GenerateStatementParser::visitBlock_declarative_item(
 			g->constants.push_back(c);
 		}
 		delete constants;
-		return;	
+		return;
 	}
 	auto sd = ctx->signal_declaration();
 	if (sd) {
@@ -202,7 +226,7 @@ void GenerateStatementParser::visitBlock_declarative_item(
 			g->signals.push_back(s);
 		}
 		delete signals;
-		return;	
+		return;
 	}
 	auto vd = ctx->variable_declaration();
 	if (vd) {
@@ -211,77 +235,77 @@ void GenerateStatementParser::visitBlock_declarative_item(
 			g->variables.push_back(v);
 		}
 		delete variables;
-        return;   			
+		return;
 	}
 	auto fd = ctx->file_declaration();
 	if (fd) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitFile_declaration");
-		return;			
+		return;
 	}
 	auto aliasd = ctx->alias_declaration();
 	if (aliasd) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitAlias_declaration");
-		return;			
+		return;
 	}
 	auto compd = ctx->component_declaration();
 	if (compd) {
 		g->components.push_back(visitComponent_declaration(compd));
-		return;	
+		return;
 	}
 	auto atrd = ctx->attribute_declaration();
 	if (atrd) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitAttribute_declaration");
-		return;			
+		return;
 	}
 	auto as = ctx->attribute_specification();
 	if (as) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitAttribute_specification");
-		return;			
+		return;
 	}
 	auto discs = ctx->disconnection_specification();
 	if (discs) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitDisconnection_specification");
-		return;			
+		return;
 	}
 	auto uc = ctx->use_clause();
 	if (uc) {
 		NotImplementedLogger::print("GenerateStatementParser.visitUse_clause");
-		return;	
+		return;
 	}
 	auto gtd = ctx->group_template_declaration();
 	if (gtd) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitGroup_template_declaration");
-		return;			
+		return;
 	}
 	auto gd = ctx->group_declaration();
 	if (gd) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitGroup_declaration");
-		return;			
+		return;
 	}
 	auto nd = ctx->nature_declaration();
 	if (nd) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitNature_declaration");
-		return;			
+		return;
 	}
 	auto snd = ctx->subnature_declaration();
 	if (snd) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitSubnature_declaration");
-		return;			
+		return;
 	}
 	auto tdc = ctx->terminal_declaration();
 	if (tdc) {
 		NotImplementedLogger::print(
 				"GenerateStatementParser.visitTerminal_declaration");
-		return;			
+		return;
 	}
 }
 
@@ -301,22 +325,20 @@ void GenerateStatementParser::visitArchitecture_statement(
 
 	auto b = ctx->block_statement();
 	if (b) {
-		NotImplementedLogger::print(
-				"ArchParser.visitBlock_statement");
-		return;		
-	} 
+		NotImplementedLogger::print("ArchParser.visitBlock_statement");
+		return;
+	}
 	auto p = ctx->process_statement();
 	if (p) {
-		g->processes.push_back(
-				ProcessParser::visitProcess_statement(p));		
-		return;				
-	} 	
+		g->processes.push_back(ProcessParser::visitProcess_statement(p));
+		return;
+	}
 	auto ci = ctx->component_instantiation_statement();
 	if (ci) {
 		g->componentInstances.push_back(
 				CompInstanceParser::visitComponent_instantiation_statement(ci));
-		return;			
-	} 
+		return;
+	}
 
 	auto gs = ctx->generate_statement();
 	if (gs) {
@@ -337,6 +359,9 @@ Entity * GenerateStatementParser::visitComponent_declaration(
 	e->name = strdup(ctx->identifier(0)->getText().c_str());
 	EntityParser::visitGeneric_clause(ctx->generic_clause(), &e->generics);
 	EntityParser::visitPort_clause(ctx->port_clause(), &e->ports);
-	
+
 	return e;
+}
+
+}
 }

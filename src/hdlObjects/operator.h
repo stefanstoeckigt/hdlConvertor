@@ -1,9 +1,11 @@
 #pragma once
 #include <vector>
-#include "jsonable.h"
 #include "operatorType.h"
 #include "expr.h"
 #include "exprItem.h"
+
+namespace hdlConvertor {
+namespace hdlObjects {
 
 class Operator: public ExprItem {
 private:
@@ -19,10 +21,9 @@ public:
 	static Operator * call(Expr* fn, std::vector<Expr*> * operands);
 	static Operator * slice(Expr* fn, std::vector<Expr*> * operands);
 	static Operator * ternary(Expr* cond, Expr* ifTrue, Expr* ifFalse);
-#ifdef USE_PYTHON
-	PyObject * toJson() const;
-#endif
 	ExprItem * clone() const;
-	void dump(int indent) const;
 	~Operator();
 };
+
+}
+}

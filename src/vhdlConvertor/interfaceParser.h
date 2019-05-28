@@ -1,21 +1,19 @@
 #pragma once
 
 #include <vector>
-#include <stdlib.h>
-#include "../VhdlParser/vhdlParser.h"
-#include "../notImplementedLogger.h"
-#include "../hdlObjects/operatorType.h"
-#include "../hdlObjects/symbolType.h"
-#include "../hdlObjects/expr.h"
+#include "vhdlParser/vhdlParser.h"
 #include "../hdlObjects/variable.h"
 #include "../hdlObjects/port.h"
-#include "../hdlObjects/direction.h"
 
-#include "exprParser.h"
-#include "directionParser.h"
+namespace hdlConvertor {
+namespace vhdl {
 
 class InterfaceParser {
 public:
+	using Variable = hdlObjects::Variable;
+	using Port = hdlObjects::Port;
+	using vhdlParser = vhdl_antlr::vhdlParser;
+
 	static std::vector<Variable*>* extractVariables(
 			vhdlParser::Identifier_listContext * identifier_list,
 			vhdlParser::Subtype_indicationContext * subType,
@@ -41,3 +39,6 @@ public:
 	static std::vector<Variable*> * visitInterface_element(
 			vhdlParser::Interface_elementContext* ctx);
 };
+
+}
+}

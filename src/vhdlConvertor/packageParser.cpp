@@ -1,4 +1,31 @@
 #include "packageParser.h"
+#include "literalParser.h"
+#include "interfaceParser.h"
+#include "packageHeaderParser.h"
+#include "statementParser.h"
+#include "../notImplementedLogger.h"
+
+#include "packageHeaderParser.h"
+#include "compInstanceParser.h"
+#include "exprParser.h"
+#include "entityParser.h"
+#include "interfaceParser.h"
+#include "literalParser.h"
+#include "referenceParser.h"
+#include "subProgramDeclarationParser.h"
+#include "variableParser.h"
+#include "constantParser.h"
+#include "statementParser.h"
+#include "subtypeDeclarationParser.h"
+#include "subProgramParser.h"
+
+
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using vhdlParser = vhdl_antlr::vhdlParser;
+using namespace hdlConvertor::hdlObjects;
 
 PackageParser::PackageParser(bool _hierarchyOnly) {
 	hierarchyOnly = _hierarchyOnly;
@@ -22,8 +49,7 @@ Package * PackageParser::visitPackage_body(
 	}
 	return p;
 }
-void PackageParser::visitPackage_body_declarative_part(
-		aPackage * p,
+void PackageParser::visitPackage_body_declarative_part(aPackage * p,
 		vhdlParser::Package_body_declarative_partContext* ctx) {
 	// package_body_declarative_part
 	// : ( package_body_declarative_item )*
@@ -36,18 +62,19 @@ void PackageParser::visitPackage_body_declarative_part(
 void PackageParser::visitPackage_body_declarative_item(
 		vhdlParser::Package_body_declarative_itemContext* ctx) {
 	// package_body_declarative_item
-	// : subprogram_declaration
-	// | subprogram_body
-	// | type_declaration
-	// | subtype_declaration
-	// | constant_declaration
-	// | variable_declaration
-	// | file_declaration
-	// | alias_declaration
-	// | use_clause
-	// | group_template_declaration
-	// | group_declaration
-	// ;
+	//   : subprogram_declaration
+	//   | subprogram_body
+	//   | type_declaration
+	//   | subtype_declaration
+	//   | constant_declaration
+	//   | variable_declaration
+	//   | file_declaration
+	//   | alias_declaration
+	//   | use_clause
+	//   | group_template_declaration
+	//   | group_declaration
+	//   ;
+    //
     auto sp = ctx->subprogram_declaration();
 	if (sp) {
 		p->function_headers.push_back(SubProgramDeclarationParser::visitSubprogram_declaration(sp));
@@ -55,22 +82,21 @@ void PackageParser::visitPackage_body_declarative_item(
 	}
     auto sb = ctx->subprogram_body();
 	if (sb) {
-		// TODO: implement
-		//Function * f = SubProgramParser::visitSubprogram_body(sb);
-		//p->functions.push_back(f);
+		Function * f = SubProgramParser::visitSubprogram_body(sb);
+		p->functions.push_back(f);
 		return;
 	}
     auto td = ctx->type_declaration();
 	if (td) {
 		NotImplementedLogger::print(
 				"PackageParser.visitType_declaration");
-        return;        
+        return;
 	}
     auto st = ctx->subtype_declaration();
 	if (st) {
 		auto _st = SubtypeDeclarationParser::visitSubtype_declaration(st);
 		p->subtype_headers.push_back(_st);
-		return;	       
+		return;
 	}
     auto constd = ctx->constant_declaration();
 	if (constd) {
@@ -80,7 +106,7 @@ void PackageParser::visitPackage_body_declarative_item(
 		}
 		delete constants;
         return;
-	}    
+	}
 	auto vd = ctx->variable_declaration();
 	if (vd) {
 		auto variables = VariableParser::visitVariable_declaration(vd);
@@ -88,19 +114,20 @@ void PackageParser::visitPackage_body_declarative_item(
 			p->variables.push_back(v);
 		}
 		delete variables;
-        return;        
+        return;
 	}
 	auto fd = ctx->file_declaration();
 	if (fd) {
 		NotImplementedLogger::print(
 				"PackageParser.visitFile_declaration");
-        return;        
+        return;
 	}
+
 	auto aliasd = ctx->alias_declaration();
 	if (aliasd) {
 		NotImplementedLogger::print(
 				"PackageParser.visitAlias_declaration");
-        return;        
+        return;
 	}
     auto uc = ctx->use_clause();
 	if (uc) {
@@ -111,15 +138,17 @@ void PackageParser::visitPackage_body_declarative_item(
 	if (gtd) {
 		NotImplementedLogger::print(
 				"PackageParser.visitGroup_template_declaration");
-        return;        
+        return;
 	}
 	auto gd = ctx->group_declaration();
 	if (gd) {
 		NotImplementedLogger::print(
 				"PackageParser.visitGroup_declaration");
-        return;        
+        return;
 	}
 	NotImplementedLogger::print(
 			"PackageParser.visitProcess_declarative_item");
-	return;
+}
+
+}
 }

@@ -1,4 +1,25 @@
 #include "packageHeaderParser.h"
+#include "compInstanceParser.h"
+#include "constantParser.h"
+#include "entityParser.h"
+#include "exprParser.h"
+#include "interfaceParser.h"
+#include "interfaceParser.h"
+#include "literalParser.h"
+#include "referenceParser.h"
+#include "signalParser.h"
+#include "statementParser.h"
+#include "subProgramDeclarationParser.h"
+#include "subProgramParser.h"
+#include "subtypeDeclarationParser.h"
+#include "variableParser.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using vhdlParser = vhdl_antlr::vhdlParser;
+using namespace hdlConvertor::hdlObjects;
+
 
 PackageHeaderParser::PackageHeaderParser(bool _hierarchyOnly) {
 	ph = new PackageHeader();
@@ -63,7 +84,7 @@ void PackageHeaderParser::visitPackage_declarative_item(
 	if (st) {
 		auto _st = SubtypeDeclarationParser::visitSubtype_declaration(st);
 		ph->subtype_headers.push_back(_st);
-		return;	
+		return;
 	}
 	auto constd = ctx->constant_declaration();
 	if (constd) {
@@ -72,7 +93,7 @@ void PackageHeaderParser::visitPackage_declarative_item(
 			ph->constants.push_back(c);
 		}
 		delete constants;
-		return;	
+		return;
 	}
 	auto sd = ctx->signal_declaration();
 	if (sd) {
@@ -81,7 +102,7 @@ void PackageHeaderParser::visitPackage_declarative_item(
 			ph->signals.push_back(s);
 		}
 		delete signals;
-		return;	
+		return;
 	}
 	auto vd = ctx->variable_declaration();
 	if (vd) {
@@ -90,7 +111,7 @@ void PackageHeaderParser::visitPackage_declarative_item(
 			ph->variables.push_back(v);
 		}
 		delete variables;
-        return;  
+        return;
 	}
 	auto fd = ctx->file_declaration();
 	if (fd) {
@@ -166,4 +187,7 @@ Entity * PackageHeaderParser::visitComponent_declaration(
 		EntityParser::visitPort_clause(ctx->port_clause(), &e->ports);
 	}
 	return e;
+}
+
+}
 }

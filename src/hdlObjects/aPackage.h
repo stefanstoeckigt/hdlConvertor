@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include "jsonable.h"
 #include <assert.h>
 #include "entity.h"
 #include "named.h"
@@ -10,7 +9,10 @@
 #include "variable.h"
 #include "statement.h"
 
-class aPackage: public Named {
+namespace hdlConvertor {
+namespace hdlObjects {
+
+class aPackage: public WithNameAndDoc {
 public:
 	std::vector<Entity*> components;
 	std::vector<Function*> function_headers;
@@ -21,9 +23,8 @@ public:
 	std::vector<Variable*> variables;
 
 	aPackage();
-#ifdef USE_PYTHON
-	PyObject * toJson() const;
-#endif
-	void dump(int indent) const;
 	~aPackage();
 };
+
+}
+}

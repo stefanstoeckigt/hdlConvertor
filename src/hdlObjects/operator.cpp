@@ -1,5 +1,8 @@
 #include "operator.h"
 
+namespace hdlConvertor {
+namespace hdlObjects {
+
 Operator::Operator() {
 	operands = NULL;
 	op0 = NULL;
@@ -7,7 +10,7 @@ Operator::Operator() {
 	op = ARROW;
 }
 
-Operator::Operator(const Operator & o){
+Operator::Operator(const Operator & o) {
 	if (o.operands) {
 		auto ops = new std::vector<Expr*>();
 		for (auto op : *o.operands) {
@@ -34,7 +37,7 @@ Operator::Operator(Expr* op0, OperatorType operatorType, Expr* op1) {
 	this->op0 = op0;
 	this->op = operatorType;
 	this->op1 = op1;
-	operands = NULL;
+	operands = nullptr;
 }
 Operator * Operator::call(Expr* fn, std::vector<Expr*> * operands) {
 	Operator * o = new Operator();
@@ -63,6 +66,8 @@ Operator * Operator::ternary(Expr* cond, Expr* ifTrue, Expr* ifFalse) {
 	return op;
 }
 Operator::~Operator() {
+	// do not delete the variables as they may be shared
+	// and they are deleted on delete of scope itself
 	if (operands) {
 		for (auto o : *operands) {
 			delete o;
@@ -75,55 +80,9 @@ Operator::~Operator() {
 		delete op1;
 }
 
-#ifdef USE_PYTHON
-PyObject * Operator::toJson() const {
-	PyObject *d = PyDict_New();
-	PyDict_SetItemString(d, "op0", op0->toJson());		
-	PyDict_SetItemString(d, "operator",
-		PyUnicode_FromString(OperatorType_toString(op)));		
-
-	int arity = OperatorType_arity(op);
-	switch (arity) {
-	case -1:
-	case 3:
-		addJsonArrP(d, "operands", *operands);
-		break;
-	case 1:
-		break;
-	case 2:
-		if (op1)
-			PyDict_SetItemString(d, "op1", op1->toJson());
-		break;
-	default:
-		throw "Invalid arity of operator";
-	}
-	return d;
-}
-#endif
-
 ExprItem * Operator::clone() const {
 	return new Operator(*this);
 }
 
-void Operator::dump(int indent) const {
-	std::cout << "{\n";
-	indent += INDENT_INCR;
-	dumpItemP("op0", indent, op0) << ",\n";
-	dumpVal("operator", indent, OperatorType_toString(op)) << ",\n";
-
-	int arity = OperatorType_arity(op);
-	switch (arity) {
-	case -1:
-	case 3:
-		dumpArrP("operands", indent, *operands) << "\n";
-		break;
-	case 1:
-		break;
-	case 2:
-		dumpItemP("op1", indent, op1) << "\n";
-		break;
-	default:
-		throw "Invalid arity of operator";
-	}
-	mkIndent(indent - INDENT_INCR) << "}";
+}
 }

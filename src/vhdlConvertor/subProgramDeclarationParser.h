@@ -1,32 +1,19 @@
 #pragma once
 #include <vector>
-#include "../VhdlParser/vhdlParser.h"
-#include "../hdlObjects/context.h"
-#include "../notImplementedLogger.h"
-#include "referenceParser.h"
-#include "../hdlObjects/named.h"
+#include "vhdlParser/vhdlParser.h"
 #include "../hdlObjects/function.h"
 #include "../hdlObjects/variable.h"
-#include "../hdlObjects/packageHeader.h"
 
-#include "compInstanceParser.h"
-#include "exprParser.h"
-#include "entityParser.h"
-#include "interfaceParser.h"
-#include "literalParser.h"
-#include "subProgramDeclarationParser.h"
-#include "variableParser.h"
-#include "constantParser.h"
-#include "statementParser.h"
-#include "subtypeDeclarationParser.h"
-#include "subProgramParser.h" 
-
-using namespace antlr4;
-using namespace vhdl;
+namespace hdlConvertor {
+namespace vhdl {
 
 class SubProgramDeclarationParser {
 public:
-    static Function * visitSubprogram_declaration(
+	using vhdlParser = vhdl_antlr::vhdlParser;
+	using Function = hdlObjects::Function;
+	using Variable = hdlObjects::Variable;
+
+	static Function * visitSubprogram_declaration(
 			vhdlParser::Subprogram_declarationContext* ctx);
 	static Function * visitSubprogram_specification(
 			vhdlParser::Subprogram_specificationContext* ctx);
@@ -35,9 +22,12 @@ public:
 	static Function * visitFunction_specification(
 			vhdlParser::Function_specificationContext* ctx);
 	static std::vector<Variable*> * visitFormal_parameter_list(
-			vhdlParser::Formal_parameter_listContext* ctx);	
+			vhdlParser::Formal_parameter_listContext* ctx);
 	static std::vector<Variable*>* visitSubprogram_declarative_part(
-		vhdlParser::Subprogram_declarative_partContext* ctx);		
-	static std::vector<Variable *> * visitSubprogram_declarative_item(
-		vhdlParser::Subprogram_declarative_itemContext* ctx);
-};            
+			vhdlParser::Subprogram_declarative_partContext* ctx);
+	static std::vector<Variable*> * visitSubprogram_declarative_item(
+			vhdlParser::Subprogram_declarative_itemContext* ctx);
+};
+
+}
+}

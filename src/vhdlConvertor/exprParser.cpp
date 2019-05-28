@@ -1,4 +1,14 @@
 #include "exprParser.h"
+#include "../notImplementedLogger.h"
+#include "literalParser.h"
+#include "referenceParser.h"
+#include "operatoTypeParser.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using vhdlParser = vhdl_antlr::vhdlParser;
+using namespace hdlConvertor::hdlObjects;
 
 std::vector<Expr*> * ExprParser::visitActual_parameter_part(
 		vhdlParser::Actual_parameter_partContext* ctx) {
@@ -25,7 +35,6 @@ std::vector<Expr*> * ExprParser::visitAssociation_list(
 	return ae;
 }
 
-
 Expr* ExprParser::visitAssociation_element(
 		vhdlParser::Association_elementContext* ctx) {
 	// association_element
@@ -35,10 +44,12 @@ Expr* ExprParser::visitAssociation_element(
 	auto fp = ctx->formal_part();
 	if (fp) {
 		auto vfp = new Expr(visitFormal_part(fp), ARROW, ap);
-		vfp->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
+		vfp->position = Position(ctx->getStart()->getLine(),
+				ctx->getStop()->getLine(), -1, -1);
 		return vfp;
 	}
-	ap->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
+	ap->position = Position(ctx->getStart()->getLine(),
+			ctx->getStop()->getLine(), -1, -1);
 	return ap;
 }
 Expr* ExprParser::visitFormal_part(vhdlParser::Formal_partContext* ctx) {
@@ -52,7 +63,7 @@ Expr* ExprParser::visitFormal_part(vhdlParser::Formal_partContext* ctx) {
 	if (e) {
 		return new Expr(id, INDEX, visitExpression(e));
 	}
-	auto er =ctx-> explicit_range();
+	auto er = ctx->explicit_range();
 	if (er) {
 		return new Expr(id, INDEX, visitExplicit_range(er));
 	}
@@ -113,32 +124,35 @@ Expr* ExprParser::visitActual_designator(
 Expr* ExprParser::visitSubtype_indication(
 		vhdlParser::Subtype_indicationContext* ctx) {
 	// subtype_indication
-	// : selected_name ( selected_name )? ( constraint )* ( tolerance_aspect
-	// )?
+	// : selected_name ( selected_name )? ( constraint )* ( tolerance_aspect )?
 	// ;
 
-    // TODO: Support more than just the constraint.
-	auto c = ctx->constraint(0);
 	assert(ctx->tolerance_aspect() == NULL);
 	auto snames = ctx->selected_name();
 	auto mainSelName = snames[0];
-
-	if (snames.size() > 1)
-		NotImplementedLogger::print(
-				"ExprParser.visitSubtype_indication - selected_name2");
 	if (ctx->tolerance_aspect())
 		NotImplementedLogger::print(
 				"ExprParser.visitSubtype_indication - tolerance_aspect");
 
-	if (c) {
-		return visitConstraint(mainSelName, c);
+	if (snames.size() > 1)
+		NotImplementedLogger::print(
+				"ExprParser.visitSubtype_indication - selected_name");
+	if (ctx->tolerance_aspect())
+		NotImplementedLogger::print(
+				"ExprParser.visitSubtype_indication - tolerance_aspect");
+
+	auto c = ctx->constraint();
+	if (c.size()) {
+		Expr * e = ReferenceParser::visitSelected_name(mainSelName);
+		for (auto _c : c)
+			e = visitConstraint(e, _c);
+		return e;
 	} else {
 		return ReferenceParser::visitSelected_name(mainSelName);
 	}
 }
 
-Expr* ExprParser::visitConstraint(
-		vhdlParser::Selected_nameContext* selectedName,
+Expr* ExprParser::visitConstraint(Expr* selectedName,
 		vhdlParser::ConstraintContext* ctx) {
 	// constraint
 	// : range_constraint
@@ -159,7 +173,7 @@ Expr* ExprParser::visitConstraint(
 		op1 = visitIndex_constraint(i);
 	}
 
-	return new Expr(ReferenceParser::visitSelected_name(selectedName), op, op1);
+	return new Expr(selectedName, op, op1);
 
 }
 Expr* ExprParser::visitIndex_constraint(
@@ -202,7 +216,7 @@ Expr* ExprParser::visitSimple_expression(
 	if (t.size() > 1)
 		tIt++;
 	if (ctx->MINUS()) {
-		op0 = new Expr(op0, UN_MINUS, NULL);
+		op0 = new Expr(op0, SUB, NULL);
 	}
 	while (opListIt != opList.end()) {
 		auto op = *opListIt;
@@ -228,20 +242,15 @@ Expr* ExprParser::visitExpression(vhdlParser::ExpressionContext* ctx) {
 	//	| logical_expression
 	//	;
 	auto le = ctx->logical_expression();
-	if (le)
-	{
+	if (le) {
 		auto vle = visitLogical_expression(le);
-		vle->raw = strdup(ctx->getText().c_str());
 		return vle;
 	}
 
 	auto p = ctx->primary();
-	if (p)
-	{
-		auto vp = visitPrimary(p);
-		vp->raw = strdup(ctx->getText().c_str());
-		return vp;
-	}
+	assert(p);
+	auto vp = visitPrimary(p);
+	return vp;
 }
 
 Expr* ExprParser::visitLogical_expression(
@@ -262,7 +271,6 @@ Expr* ExprParser::visitLogical_expression(
 		++opIt;
 	}
 	return op0;
-
 }
 
 Expr* ExprParser::visitRelation(vhdlParser::RelationContext* ctx) {
@@ -387,14 +395,14 @@ Expr* ExprParser::visitQualified_expression(
 	// RPAREN )
 	// ;
 	NotImplementedLogger::print("ExprParser visitQualified_expression");
-	return NULL;
+	return nullptr;
 }
 Expr* ExprParser::visitAllocator(vhdlParser::AllocatorContext* ctx) {
 	// allocator
 	// : NEW ( qualified_expression | subtype_indication )
 	// ;
 	NotImplementedLogger::print("ExprParser visitAllocator");
-	return NULL;
+	return nullptr;
 
 }
 Expr* ExprParser::visitAggregate(vhdlParser::AggregateContext* ctx) {
@@ -406,7 +414,7 @@ Expr* ExprParser::visitAggregate(vhdlParser::AggregateContext* ctx) {
 		Expr * e = visitElement_association(elm);
 		elements.push_back(e);
 	}
-	Expr * arr  = Expr::ARRAY(elements);
+	Expr * arr = Expr::ARRAY(elements);
 
 	return arr;
 }
@@ -417,7 +425,8 @@ Expr* ExprParser::visitElement_association(
 	//   : (  choices ARROW )? expression
 	//   ;
 	if (ctx->choices()) {
-		NotImplementedLogger::print("ExprParser.visitElement_association.choices");
+		NotImplementedLogger::print(
+				"ExprParser.visitElement_association.choices");
 	}
 	return visitExpression(ctx->expression());
 }
@@ -442,7 +451,7 @@ Expr * ExprParser::visitWaveform(vhdlParser::WaveformContext* ctx) {
 	// ;
 	if (ctx->UNAFFECTED()) {
 		NotImplementedLogger::print("ExprParser.visitWaveform - UNAFFECTED");
-		return NULL;
+		return nullptr;
 	}
 	auto we = ctx->waveform_element();
 	auto weIt = we.begin();
@@ -454,7 +463,6 @@ Expr * ExprParser::visitWaveform(vhdlParser::WaveformContext* ctx) {
 		++weIt;
 	}
 
-	top->raw = strdup(ctx->getText().c_str());
 	return top;
 }
 
@@ -472,5 +480,65 @@ Expr *ExprParser::visitWaveform_element(
 				"ExprParser.visitWaveform_element - AFTER expression");
 	}
 	return top;
+}
 
+Expr * ExprParser::visitChoice(vhdlParser::ChoiceContext * ctx) {
+	//choice
+	//  : identifier
+	//  | discrete_range
+	//  | simple_expression
+	//  | OTHERS
+	//  ;
+	//
+	auto i = ctx->identifier();
+	if (i) {
+		return LiteralParser::visitIdentifier(i);
+	}
+	auto dr = ctx->discrete_range();
+	if (dr) {
+		return visitDiscrete_range(dr);
+	}
+	auto e = ctx->simple_expression();
+	if (e) {
+		return visitSimple_expression(e);
+	}
+	return nullptr;
+}
+std::vector<Expr *> ExprParser::visitChoices(vhdlParser::ChoicesContext * ctx) {
+	//choices
+	//  : choice ( BAR choice )*
+	//  ;
+	std::vector<Expr *> res;
+	for (auto c : ctx->choice()) {
+		res.push_back(visitChoice(c));
+	}
+	return res;
+}
+
+Expr * ExprParser::visitProcedure_call_statement(
+		vhdlParser::Procedure_call_statementContext * ctx) {
+	// procedure_call_statement
+	//   : ( label_colon )? procedure_call SEMI
+	//   ;
+	if (ctx->label_colon()) {
+		NotImplementedLogger::print(
+				"ExprParser.visitProcedure_call_statement - label_colon");
+
+	}
+	return visitProcedure_call(ctx->procedure_call());
+}
+Expr * ExprParser::visitProcedure_call(
+		vhdlParser::Procedure_callContext * ctx) {
+	// procedure_call
+	//   : selected_name ( LPAREN actual_parameter_part RPAREN )?
+	//   ;
+	//
+	Expr * fnName = ReferenceParser::visitSelected_name(ctx->selected_name());
+	return Expr::call(fnName,
+					ExprParser::visitActual_parameter_part(
+							ctx->actual_parameter_part()));
+
+}
+
+}
 }

@@ -1,4 +1,18 @@
 #include "processParser.h"
+#include "statementParser.h"
+#include "constantParser.h"
+#include "variableParser.h"
+#include "literalParser.h"
+#include "subtypeDeclarationParser.h"
+#include "notImplementedLogger.h"
+#include "referenceParser.h"
+#include "subProgramDeclarationParser.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using namespace hdlConvertor::hdlObjects;
+using vhdlParser = vhdl_antlr::vhdlParser;
 
 Process * ProcessParser::visitProcess_statement(
 		vhdlParser::Process_statementContext * ctx) {
@@ -12,7 +26,7 @@ Process * ProcessParser::visitProcess_statement(
         //  ;
 
     Process * p = new Process();
-	p->position = new Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), NULL, NULL);
+	p->position = Position(ctx->getStart()->getLine(), ctx->getStop()->getLine(), -1, -1);
     if (ctx->label_colon()) {
         p->name = visitLabel_colon(ctx->label_colon());
     }
@@ -21,9 +35,10 @@ Process * ProcessParser::visitProcess_statement(
 		auto sensList = visitSensitivity_list(ctx->sensitivity_list());
 		for (auto sl : *sensList) {
 			if (sl) {
-    			p->sensitivities.push_back(sl);
+    			p->sensitivity_list.push_back(sl);
 			}
 		}
+		p->sensitivity_list_specified = true;
 	}
 
     visitProcess_declarative_part(ctx->process_declarative_part(), p);
@@ -31,7 +46,7 @@ Process * ProcessParser::visitProcess_statement(
 	auto statParts = visitProcess_statement_part(ctx->process_statement_part());
 	for (auto sp : *statParts) {
 		if (sp) {
-			p->body.push_back(sp);
+			p->statements.push_back(sp);
 		}
 	}
 
@@ -193,6 +208,8 @@ std::vector<Statement *> * ProcessParser::visitProcess_statement_part(
 	return statements;
 }
 
+}
+}
 
 
 

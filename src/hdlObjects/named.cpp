@@ -1,24 +1,28 @@
 #include "named.h"
+#include <stdlib.h>
 
+namespace hdlConvertor {
+namespace hdlObjects {
 
 Named::Named() {
-	name = NULL;
+	name = nullptr;
 }
 
-#ifdef USE_PYTHON
-PyObject * Named::toJson() const {
-	PyObject *d = PyDict_New();
-	assert(name != NULL);
-	PyDict_SetItemString(d, "name", PyUnicode_FromString(name));
-	return d;
-}
-#endif
-
-void Named::dump(int indent) const {
-	std::cout << "{\n";
-	mkIndent(indent + INDENT_INCR) << "\"name\":\"" << name << "\",\n";
+Named::Named(char * name) :
+		name(name) {
 }
 
 Named::~Named() {
 	free(name);
+}
+
+WithNameAndDoc::WithNameAndDoc() :
+		Named() {
+}
+
+WithNameAndDoc::WithNameAndDoc(char * name) :
+		Named(name) {
+}
+
+}
 }

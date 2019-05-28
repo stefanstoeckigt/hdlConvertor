@@ -1,4 +1,13 @@
 #include "referenceParser.h"
+#include "literalParser.h"
+#include "exprParser.h"
+#include "../notImplementedLogger.h"
+
+namespace hdlConvertor {
+namespace vhdl {
+
+using vhdlParser = vhdl_antlr::vhdlParser;
+using namespace hdlConvertor::hdlObjects;
 
 Expr * ReferenceParser::visitSelected_name(
 		vhdlParser::Selected_nameContext* ctx) {
@@ -12,6 +21,7 @@ Expr * ReferenceParser::visitSelected_name(
 	assert(top);
 	return top;
 }
+
 Expr * ReferenceParser::visitSuffix(vhdlParser::SuffixContext* ctx) {
 	// suffix
 	// : identifier
@@ -57,24 +67,11 @@ Expr * ReferenceParser::visitName(vhdlParser::NameContext* ctx) {
 	return op0;
 }
 
-Expr * ReferenceParser::visitName_part(vhdlParser::Name_partContext* ctx) {
-// name_part
-// : selected_name (name_part_specificator)*
-// ;
-	Expr * sn = visitSelected_name(ctx->selected_name());
-	for (auto sp : ctx->name_part_specificator()) {
-		sn = visitName_part_specificator(sn, sp);
-	}
-	return sn;
-}
-
-Expr * ReferenceParser::visitName_attribute_part(
-		Expr * selectedName,
+Expr * ReferenceParser::visitName_attribute_part(Expr * selectedName,
 		vhdlParser::Name_attribute_partContext* ctx) {
-// name_attribute_part
-// : APOSTROPHE attribute_designator ( expression ( COMMA expression
-// )* )?
-// ;
+	// name_attribute_part
+	// : APOSTROPHE attribute_designator ( expression ( COMMA expression )* )?
+	// ;
 	auto expressions = ctx->expression();
 	if (expressions.size() > 0)
 		NotImplementedLogger::print(
@@ -82,61 +79,48 @@ Expr * ReferenceParser::visitName_attribute_part(
 	return visitAttribute_designator(selectedName, ctx->attribute_designator());
 }
 
-Expr * ReferenceParser::visitAttribute_designator(
-		Expr * selectedName,
+Expr * ReferenceParser::visitAttribute_designator(Expr * selectedName,
 		vhdlParser::Attribute_designatorContext* ctx) {
-// attribute_designator
-// : identifier
-// | RANGE
-// | REVERSE_RANGE
-// | ACROSS
-// | THROUGH
-// | REFERENCE
-// | TOLERANCE
-// ;
+	// attribute_designator
+	// : identifier
+	// | RANGE
+	// | REVERSE_RANGE
+	// | ACROSS
+	// | THROUGH
+	// | REFERENCE
+	// | TOLERANCE
+	// ;
 	auto idctx = ctx->identifier();
 	if (idctx) {
 		Expr * id = LiteralParser::visitIdentifier(idctx);
 		return new Expr(selectedName, DOT, id);
 	}
 
-	if (ctx->RANGE())
-	{
+	if (ctx->RANGE()) {
 		return new Expr(selectedName, RANGE, NULL);
 	}
 
-	if (ctx->REVERSE_RANGE())
-	{
+	if (ctx->REVERSE_RANGE()) {
 		return new Expr(selectedName, REVERSE_RANGE, NULL);
 	}
 
-	if (ctx->ACROSS())
-	{
+	if (ctx->ACROSS()) {
 		return new Expr(selectedName, ACROSS, NULL);
 	}
 
-	if (ctx->THROUGH())
-	{
+	if (ctx->THROUGH()) {
 		return new Expr(selectedName, THROUGH, NULL);
 	}
 
-	if (ctx->REFERENCE())
-	{
+	if (ctx->REFERENCE()) {
 		return new Expr(selectedName, REFERENCE, NULL);
 	}
 
-	if (ctx->TOLERANCE())
-	{
-		return new Expr(selectedName, TOLERANCE, NULL);
-	}	
-
-	NotImplementedLogger::print(
-			"ExprParser.visitAttribute_designator - non identifier");
-	return Expr::null();
+	assert(ctx->TOLERANCE());
+	return new Expr(selectedName, TOLERANCE, NULL);
 }
 
-Expr * ReferenceParser::visitName_part_specificator(
-		Expr * selectedName,
+Expr * ReferenceParser::visitName_part_specificator(Expr * selectedName,
 		vhdlParser::Name_part_specificatorContext* ctx) {
 	// name_part_specificator
 	// : name_attribute_part
@@ -158,24 +142,34 @@ Expr * ReferenceParser::visitName_part_specificator(
 						callOrIndx->actual_parameter_part()));
 	}
 	auto ns = ctx->name_slice_part();
-	if (ns)
-	{
-		return Expr::slice(selectedName, 
-				visitName_slice_part(ns));
+	if (ns) {
+		return Expr::slice(selectedName, visitName_slice_part(ns));
 	}
 	return Expr::null();
 }
 
+Expr * ReferenceParser::visitName_part(vhdlParser::Name_partContext* ctx) {
+	// name_part
+	// : selected_name (name_part_specificator)*
+	// ;
+	Expr * sn = visitSelected_name(ctx->selected_name());
+	for (auto sp : ctx->name_part_specificator()) {
+		sn = visitName_part_specificator(sn, sp);
+	}
+	return sn;
+}
+
 std::vector<Expr*> * ReferenceParser::visitName_slice_part(
 		vhdlParser::Name_slice_partContext *ctx) {
-	//name_slice_part
+	// name_slice_part
 	//   : LPAREN explicit_range ( COMMA explicit_range )* RPAREN
 	//   ;
-
-	// TODO: Needs work..
 	std::vector<Expr*> * sp = new std::vector<Expr*>();
 	for (auto er : ctx->explicit_range()) {
 		sp->push_back(ExprParser::visitExplicit_range(er));
 	}
 	return sp;
+}
+
+}
 }
