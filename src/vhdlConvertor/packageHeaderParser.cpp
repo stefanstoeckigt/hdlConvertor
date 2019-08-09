@@ -1,18 +1,19 @@
-#include "packageHeaderParser.h"
-#include "compInstanceParser.h"
-#include "constantParser.h"
-#include "entityParser.h"
-#include "exprParser.h"
-#include "interfaceParser.h"
-#include "interfaceParser.h"
-#include "literalParser.h"
-#include "referenceParser.h"
-#include "signalParser.h"
-#include "statementParser.h"
-#include "subProgramDeclarationParser.h"
-#include "subProgramParser.h"
-#include "subtypeDeclarationParser.h"
-#include "variableParser.h"
+#include <hdlConvertor/vhdlConvertor/packageHeaderParser.h>
+
+#include <hdlConvertor/vhdlConvertor/compInstanceParser.h>
+#include <hdlConvertor/vhdlConvertor/constantParser.h>
+#include <hdlConvertor/vhdlConvertor/exprParser.h>
+#include <hdlConvertor/vhdlConvertor/interfaceParser.h>
+#include <hdlConvertor/vhdlConvertor/interfaceParser.h>
+#include <hdlConvertor/vhdlConvertor/literalParser.h>
+#include <hdlConvertor/vhdlConvertor/referenceParser.h>
+#include <hdlConvertor/vhdlConvertor/signalParser.h>
+#include <hdlConvertor/vhdlConvertor/statementParser.h>
+#include <hdlConvertor/vhdlConvertor/subProgramDeclarationParser.h>
+#include <hdlConvertor/vhdlConvertor/subProgramParser.h>
+#include <hdlConvertor/vhdlConvertor/subtypeDeclarationParser.h>
+#include <hdlConvertor/vhdlConvertor/entityParser.h>
+#include <hdlConvertor/vhdlConvertor/variableParser.h>
 
 namespace hdlConvertor {
 namespace vhdl {
@@ -20,25 +21,31 @@ namespace vhdl {
 using vhdlParser = vhdl_antlr::vhdlParser;
 using namespace hdlConvertor::hdlObjects;
 
-
 PackageHeaderParser::PackageHeaderParser(bool _hierarchyOnly) {
-	ph = new PackageHeader();
+	ph = new HdlNamespace();
+	ph->defs_only = true;
 	hierarchyOnly = _hierarchyOnly;
 }
 
-PackageHeader * PackageHeaderParser::visitPackage_declaration(
+HdlNamespace * PackageHeaderParser::visitPackage_declaration(
 		vhdlParser::Package_declarationContext* ctx) {
-	// package_declaration
-	// : PACKAGE identifier IS
-	// package_declarative_part
-	// END ( PACKAGE )? ( identifier )? SEMI
+	// package_declaration:
+	//       PACKAGE identifier IS
+	//           package_header
+	//           package_declarative_part
+	//       END ( PACKAGE )? ( simple_name )? SEMI
 	// ;
-	Expr * name = LiteralParser::visitIdentifier(ctx->identifier(0));
+
+	NotImplementedLogger::print(
+			"PackageHeaderParser.visitPackage_declaration - package_header", ctx);
+
+	iHdlExpr * name = LiteralParser::visitIdentifier(ctx->identifier());
 	ph->name = name->extractStr();
-	visitPackage_declarative_part(ph, ctx->package_declarative_part());
+	delete name;
+	visitPackage_declarative_part(ctx->package_declarative_part());
 	return ph;
 }
-void PackageHeaderParser::visitPackage_declarative_part(PackageHeader * ph,
+void PackageHeaderParser::visitPackage_declarative_part(
 		vhdlParser::Package_declarative_partContext* ctx) {
 	// package_declarative_part
 	// : ( package_declarative_item )*
@@ -72,25 +79,45 @@ void PackageHeaderParser::visitPackage_declarative_item(
 	// ;
 	auto sp = ctx->subprogram_declaration();
 	if (sp) {
-		ph->function_headers.push_back(SubProgramDeclarationParser::visitSubprogram_declaration(sp));
+		ph->objs.push_back(
+				SubProgramDeclarationParser::visitSubprogram_declaration(sp));
+		return;
+	}
+	auto sid = ctx->subprogram_instantiation_declaration();
+	if (sid) {
+		NotImplementedLogger::print(
+				"PackageHeaderParser.visitPackage_declarative_item - subprogram_instantiation_declaration", sid);
+		return;
+	}
+	auto pd = ctx->package_declaration();
+	if (pd) {
+		PackageHeaderParser php(hierarchyOnly);
+		auto pac_header = php.visitPackage_declaration(pd);
+		ph->objs.push_back(pac_header);
+		return;
+	}
+	auto pid = ctx->package_instantiation_declaration();
+	if (pid) {
+		NotImplementedLogger::print(
+				"PackageHeaderParser.visitPackage_declarative_item - package_instantiation_declaration", pid);
 		return;
 	}
 	auto td = ctx->type_declaration();
 	if (td) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitType_declaration");
+				"PackageHeaderParser.visitType_declaration", td);
 	}
 	auto st = ctx->subtype_declaration();
 	if (st) {
 		auto _st = SubtypeDeclarationParser::visitSubtype_declaration(st);
-		ph->subtype_headers.push_back(_st);
+		ph->objs.push_back(_st);
 		return;
 	}
 	auto constd = ctx->constant_declaration();
 	if (constd) {
 		auto constants = ConstantParser::visitConstant_declaration(constd);
 		for (auto c : *constants) {
-			ph->constants.push_back(c);
+			ph->objs.push_back(c);
 		}
 		delete constants;
 		return;
@@ -99,7 +126,7 @@ void PackageHeaderParser::visitPackage_declarative_item(
 	if (sd) {
 		auto signals = SignalParser::visitSignal_declaration(sd);
 		for (auto s : *signals) {
-			ph->signals.push_back(s);
+			ph->objs.push_back(s);
 		}
 		delete signals;
 		return;
@@ -108,83 +135,73 @@ void PackageHeaderParser::visitPackage_declarative_item(
 	if (vd) {
 		auto variables = VariableParser::visitVariable_declaration(vd);
 		for (auto v : *variables) {
-			ph->variables.push_back(v);
+			ph->objs.push_back(v);
 		}
 		delete variables;
-        return;
+		return;
 	}
 	auto fd = ctx->file_declaration();
 	if (fd) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitFile_declaration");
+				"PackageHeaderParser.visitFile_declaration", fd);
 	}
 	auto aliasd = ctx->alias_declaration();
 	if (aliasd) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitAlias_declaration");
+				"PackageHeaderParser.visitAlias_declaration", aliasd);
 	}
 	auto compd = ctx->component_declaration();
 	if (compd) {
-		ph->components.push_back(visitComponent_declaration(compd));
+		ph->objs.push_back(visitComponent_declaration(compd));
 	}
 	auto atrd = ctx->attribute_declaration();
 	if (atrd) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitAttribute_declaration");
+				"PackageHeaderParser.visitAttribute_declaration", atrd);
 	}
 	auto as = ctx->attribute_specification();
 	if (as) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitAttribute_specification");
+				"PackageHeaderParser.visitAttribute_specification", as);
 	}
 	auto discs = ctx->disconnection_specification();
 	if (discs) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitDisconnection_specification");
+				"PackageHeaderParser.visitDisconnection_specification", discs);
 	}
 	auto uc = ctx->use_clause();
 	if (uc) {
-		NotImplementedLogger::print("PackageHeaderParser.visitUse_clause");
+		NotImplementedLogger::print("PackageHeaderParser.visitUse_clause", uc);
 	}
 	auto gtd = ctx->group_template_declaration();
 	if (gtd) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitGroup_template_declaration");
+				"PackageHeaderParser.visitGroup_template_declaration", gtd);
 	}
 	auto gd = ctx->group_declaration();
 	if (gd) {
 		NotImplementedLogger::print(
-				"PackageHeaderParser.visitGroup_declaration");
-	}
-	auto nd = ctx->nature_declaration();
-	if (nd) {
-		NotImplementedLogger::print(
-				"PackageHeaderParser.visitNature_declaration");
-	}
-	auto snd = ctx->subnature_declaration();
-	if (snd) {
-		NotImplementedLogger::print(
-				"PackageHeaderParser.visitSubnature_declaration");
-	}
-	auto tdc = ctx->terminal_declaration();
-	if (tdc) {
-		NotImplementedLogger::print(
-				"PackageHeaderParser.visitTerminal_declaration");
+				"PackageHeaderParser.visitGroup_declaration", gd);
 	}
 }
-Entity * PackageHeaderParser::visitComponent_declaration(
+HdlModuleDec * PackageHeaderParser::visitComponent_declaration(
 		vhdlParser::Component_declarationContext* ctx) {
-	// component_declaration
-	// : COMPONENT identifier ( IS )?
-	// ( generic_clause )?
-	// ( port_clause )?
-	// END COMPONENT ( identifier )? SEMI
+	// component_declaration:
+	//       COMPONENT identifier ( IS )?
+	//           ( generic_clause )?
+	//           ( port_clause )?
+	//       END COMPONENT ( simple_name )? SEMI
 	// ;
-	Entity * e = new Entity();
-	e->name = strdup(ctx->identifier(0)->getText().c_str());
+
+	HdlModuleDec * e = new HdlModuleDec();
+	e->name = ctx->identifier()->getText();
 	if (!hierarchyOnly) {
-		EntityParser::visitGeneric_clause(ctx->generic_clause(), &e->generics);
-		EntityParser::visitPort_clause(ctx->port_clause(), &e->ports);
+		auto gc = ctx->generic_clause();
+		if (gc)
+			EntityParser::visitGeneric_clause(gc, &e->generics);
+		auto pc = ctx->port_clause();
+		if (pc)
+			EntityParser::visitPort_clause(pc, &e->ports);
 	}
 	return e;
 }

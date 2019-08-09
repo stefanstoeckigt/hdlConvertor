@@ -1,43 +1,47 @@
-#include "portParser.h"
-#include "../notImplementedLogger.h"
-#include "utils.h"
-#include "exprParser.h"
-
-using namespace std;
-using Verilog2001Parser = Verilog2001_antlr::Verilog2001Parser;
-using namespace hdlConvertor::hdlObjects;
+#include <hdlConvertor/verilogConvertor/portParser.h>
+#include <hdlConvertor/notImplementedLogger.h>
+#include <hdlConvertor/verilogConvertor/utils.h>
+#include <hdlConvertor/verilogConvertor/exprParser.h>
+#include <hdlConvertor/hdlObjects/hdlDirection.h>
 
 namespace hdlConvertor {
 namespace verilog {
+
+using namespace std;
+using Verilog2001Parser = Verilog2001_antlr::Verilog2001Parser;
+using namespace hdlObjects;
 
 PortParser::PortParser(CommentParser & commentParser) :
 		commentParser(commentParser) {
 }
 
-vector<Port*>* PortParser::addTypeSpecToPorts(Direction direction,
+vector<HdlVariableDef*>* PortParser::addTypeSpecToPorts(HdlDirection direction,
 		Verilog2001Parser::Net_typeContext* net_type, bool signed_, bool reg_,
-		string doc, Verilog2001Parser::Range_Context* range_,
-		vector<Port*> * ports) {
+		const string & doc, Verilog2001Parser::Range_Context* range_,
+		vector<HdlVariableDef*> * ports) {
 	if ((net_type != nullptr) && (net_type->getText() != "wire")) {
 		NotImplementedLogger::print(
-				"PortParser.addTypeSpecToPorts.net_type different than wire");
+				"PortParser.addTypeSpecToPorts.net_type different than wire",
+				net_type);
 	}
 	bool first = true;
 	for (auto p : *ports) {
-		assert(!p->variable->type);
-		if (first)
-			p->variable->__doc__ = doc + p->variable->__doc__;
-		p->variable->type = Utils::mkWireT(range_, signed_);
+		assert(!p->type);
+		if (first) {
+			p->__doc__ = doc + p->__doc__;
+			first = false;
+		}
+		p->type = Utils::mkWireT(range_, signed_);
 		p->direction = direction;
-		p->variable->latched = reg_;
+		p->is_latched = reg_;
 	}
 	return ports;
 }
 
-vector<Port*>* PortParser::visitList_of_ports(
+vector<HdlVariableDef*>* PortParser::visitList_of_ports(
 		Verilog2001Parser::List_of_portsContext* ctx) {
 	// list_of_ports : '(' port ( ',' port )* ')' ;
-	vector<Port*>* ports = new vector<Port*>();
+	auto ports = new vector<HdlVariableDef*>();
 	for (auto p : ctx->port()) {
 		auto ps = visitPort(p);
 		for (unsigned i = 0; i < ps->size(); i++) {
@@ -47,26 +51,27 @@ vector<Port*>* PortParser::visitList_of_ports(
 	}
 	return ports;
 }
-vector<Port*> * PortParser::visitPort(Verilog2001Parser::PortContext* ctx) {
+vector<HdlVariableDef*> * PortParser::visitPort(
+		Verilog2001Parser::PortContext* ctx) {
 	// port: port_expression?
 	// | '.' port_identifier '(' ( port_expression )? ')'
 	// ;
 	auto pi = ctx->port_identifier();
 	if (pi) {
 		NotImplementedLogger::print(
-				"Source_textParser.visitPort - port identifier");
-		return new vector<Port*>();
+				"Source_textParser.visitPort - port identifier", pi);
+		return new vector<HdlVariableDef*>();
 	} else {
 		return visitPort_expression(ctx->port_expression());
 	}
 }
-vector<Port*> *PortParser::visitPort_expression(
+vector<HdlVariableDef*> *PortParser::visitPort_expression(
 		Verilog2001Parser::Port_expressionContext* ctx) {
 	// port_expression :
 	// port_reference
 	// | '{' port_reference ( ',' port_reference )* '}'
 	// ;
-	vector<Port*> *ports = new vector<Port*>();
+	vector<HdlVariableDef*> *ports = new vector<HdlVariableDef*>();
 	if (ctx) {
 		for (auto pr : ctx->port_reference()) {
 			ports->push_back(visitPort_reference(pr));
@@ -74,7 +79,7 @@ vector<Port*> *PortParser::visitPort_expression(
 	}
 	return ports;
 }
-Port * PortParser::visitPort_reference(
+HdlVariableDef * PortParser::visitPort_reference(
 		Verilog2001Parser::Port_referenceContext* ctx) {
 	// port_reference :
 	// port_identifier
@@ -83,7 +88,7 @@ Port * PortParser::visitPort_reference(
 	// ;
 	// port_identifier : identifier ;
 
-	Expr * t = NULL;
+	iHdlExpr * t = nullptr;
 	auto c = ctx->constant_expression();
 	if (c) {
 		t = VerExprParser::visitConstant_expression(c);
@@ -92,18 +97,19 @@ Port * PortParser::visitPort_reference(
 	if (r)
 		t = VerExprParser::visitRange_expression(r);
 
-	auto variable = new Variable(
-			ctx->port_identifier()->identifier()->getText().c_str(), t, NULL);
-	return new Port(DIR_UNKNOWN, variable);
+	auto p = new HdlVariableDef(ctx->port_identifier()->identifier()->getText(),
+			t, nullptr);
+	p->direction = HdlDirection::DIR_UNKNOWN;
+	return p;
 
 }
-vector<Port*>* PortParser::visitList_of_port_declarations(
+vector<HdlVariableDef*>* PortParser::visitList_of_port_declarations(
 		Verilog2001Parser::List_of_port_declarationsContext* ctx) {
 	// list_of_port_declarations
 	// : '(' port_declaration ( ',' port_declaration )* ')'
 	// | '(' ')'
 	// ;
-	auto ports = new vector<Port*>();
+	auto ports = new vector<HdlVariableDef*>();
 	for (auto pd : ctx->port_declaration()) {
 		auto pds = visitPort_declaration(pd);
 		for (unsigned i = 0; i < pds->size(); i++)
@@ -112,7 +118,7 @@ vector<Port*>* PortParser::visitList_of_port_declarations(
 	}
 	return ports;
 }
-vector<Port*> * PortParser::visitPort_declaration(
+vector<HdlVariableDef*> * PortParser::visitPort_declaration(
 		Verilog2001Parser::Port_declarationContext* ctx) {
 	// port_declaration :
 	// attribute_instance* inout_declaration
@@ -120,11 +126,11 @@ vector<Port*> * PortParser::visitPort_declaration(
 	// | attribute_instance* output_declaration
 	// ;
 	string doc = commentParser.parse(ctx);
-	// [TODO] attribs
 	auto attribs = ctx->attribute_instance();
 	if (attribs.size() > 0) {
 		NotImplementedLogger::print(
-				"ModuleParser.visitPort_declaration - attribs not implemented");
+				"ModuleParser.visitPort_declaration - attribs not implemented",
+				ctx);
 	}
 
 	bool signed_ = Utils::is_signed(ctx);
@@ -162,7 +168,7 @@ vector<Port*> * PortParser::visitPort_declaration(
 		auto od = ctx->output_declaration();
 		reg_ = Utils::is_reg(od);
 		signed_ = Utils::is_signed(od);
-		vector<Port*> * ports;
+		vector<HdlVariableDef*> * ports;
 		auto lovpi = od->list_of_variable_port_identifiers();
 		if (lovpi) {
 			ports = visitList_of_variable_port_identifiers(lovpi);
@@ -174,36 +180,36 @@ vector<Port*> * PortParser::visitPort_declaration(
 				od->range_(), ports);
 	}
 }
-vector<Port*> * PortParser::visitList_of_port_identifiers(
+vector<HdlVariableDef*> * PortParser::visitList_of_port_identifiers(
 		Verilog2001Parser::List_of_port_identifiersContext* ctx) {
 	// list_of_port_identifiers :
 	// port_identifier ( ',' port_identifier )*
 	// ;
-	vector<Port*> * ports = new vector<Port*>();
+	auto ports = new vector<HdlVariableDef*>();
 	for (auto pi : ctx->port_identifier()) {
 		ports->push_back(visitPort_identifier(pi));
 	}
 	return ports;
 }
-Port * PortParser::visitPort_identifier(
+HdlVariableDef * PortParser::visitPort_identifier(
 		Verilog2001Parser::Port_identifierContext* ctx) {
 	// port_identifier : identifier ;
-	Variable * v = new Variable(ctx->identifier()->getText(), NULL, NULL);
-	return new Port(DIR_UNKNOWN, v);
+	auto v = new HdlVariableDef(ctx->identifier()->getText(), NULL, NULL);
+	v->direction = HdlDirection::DIR_UNKNOWN;
+	return v;
 }
-vector<Port*> *PortParser::visitList_of_variable_port_identifiers(
+vector<HdlVariableDef*> *PortParser::visitList_of_variable_port_identifiers(
 		Verilog2001Parser::List_of_variable_port_identifiersContext* ctx) {
 	// list_of_variable_port_identifiers :
 	// port_identifier ( '=' constant_expression )? ( ',' port_identifier (
 	// '=' constant_expression )? )* ;
-	vector<Port*>* ports = new vector<Port*>();
-	Port * last = NULL;
+	auto ports = new vector<HdlVariableDef*>();
+	HdlVariableDef * last = nullptr;
 	for (auto n : ctx->children) {
 		auto cec =
 				dynamic_cast<Verilog2001Parser::Constant_expressionContext*>(n);
 		if (cec) {
-			last->variable->value = VerExprParser::visitConstant_expression(
-					cec);
+			last->value = VerExprParser::visitConstant_expression(cec);
 		} else {
 			auto pic =
 					dynamic_cast<Verilog2001Parser::Port_identifierContext*>(n);

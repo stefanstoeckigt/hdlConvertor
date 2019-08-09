@@ -1,5 +1,4 @@
 from skbuild import setup
-from os import path
 
 setup(
     cmake_args= [
@@ -7,11 +6,12 @@ setup(
     ],
     name='hdlConvertor',
     version='1.2',
-    description='VHDL and System Verilog parser written in c++, this module is primary used for hdl manipulation and analysis',
+    description='VHDL and System Verilog parser written in c++',
     url='https://github.com/Nic30/hdlConvertor',
     author='Michal Orsak',
     author_email='michal.o.socials@gmail.com',
-    keywords=['vhdl', 'verilog', 'system verilog', 'parser', 'hdl'],
+    keywords=['hdl', 'vhdl', 'verilog', 'system verilog',
+              'parser', 'preprocessor', 'antlr4'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -22,6 +22,5 @@ setup(
         'Programming Language :: Python :: 2.7'
         'Programming Language :: Python :: 3',
     ],
-    packages=['hdlConvertor'],
-    package_dir={'hdlConvertor':'src/'}
+    packages=['hdlConvertor', 'hdlConvertor.hdlAst'],
 )

@@ -1,13 +1,16 @@
-#include "literalParser.h"
-#include "../notImplementedLogger.h"
-
-using Verilog2001Parser = Verilog2001_antlr::Verilog2001Parser;
-using namespace hdlConvertor::hdlObjects;
+#include <hdlConvertor/verilogConvertor/literalParser.h>
+#include <algorithm>
+#include <hdlConvertor/notImplementedLogger.h>
 
 namespace hdlConvertor {
 namespace verilog {
 
-Expr * VerLiteralParser::visitNumber(Verilog2001Parser::NumberContext* ctx) {
+using Verilog2001Parser = Verilog2001_antlr::Verilog2001Parser;
+using namespace hdlConvertor::hdlObjects;
+using TerminalNode = antlr4::tree::TerminalNode;
+
+iHdlExpr * VerLiteralParser::visitNumber(
+		Verilog2001Parser::NumberContext* ctx) {
 	// number :
 	// Decimal_number
 	// | Octal_number
@@ -31,22 +34,21 @@ Expr * VerLiteralParser::visitNumber(Verilog2001Parser::NumberContext* ctx) {
 	if (n) {
 		return parseIntNumber(n, 16);
 	}
-	NotImplementedLogger::print("ExpressionParser.visitNumber - Real_number");
+	NotImplementedLogger::print("ExpressionParser.visitNumber - Real_number",
+			ctx);
 	return NULL;
 
 }
-Expr * VerLiteralParser::parseSimple_identifier(antlr4::tree::TerminalNode* n) {
-	return Expr::ID(n->getText());
+iHdlExpr * VerLiteralParser::parseSimple_identifier(TerminalNode* n) {
+	return iHdlExpr::ID(n->getText());
 }
-Expr * VerLiteralParser::parseEscaped_identifier(
-		antlr4::tree::TerminalNode* n) {
+iHdlExpr * VerLiteralParser::parseEscaped_identifier(TerminalNode* n) {
 	auto s = n->getText();
 	s = s.substr(1);
-	return Expr::ID(s);
+	return iHdlExpr::ID(s);
 }
 
-Expr * VerLiteralParser::parseIntNumber(antlr4::tree::TerminalNode* n,
-		int radix) {
+iHdlExpr * VerLiteralParser::parseIntNumber(TerminalNode* n, int radix) {
 	// Decimal_number :
 	// Unsigned_number
 	// | ( Size )? Decimal_base Unsigned_number
@@ -74,17 +76,13 @@ Expr * VerLiteralParser::parseIntNumber(antlr4::tree::TerminalNode* n,
 	}
 
 	std::string strVal = s.substr(valuePartStart, s.length()); // cut off prefix
-	for (int i = 0; strVal[i]; i++) {
-		char ch = strVal[i];
-		if (ch == 'x' || ch == 'z') {
-			strVal[i] = '0';
-		}
-	}
-
 	if (size != -1)
-		return Expr::INT(strVal, size, radix);
-
-	return Expr::INT(strVal, radix);
+		return iHdlExpr::INT(strVal, size, radix);
+	if (radix == 10) {
+		auto v = atoi(strVal.c_str());
+		return iHdlExpr::INT(v);
+	}
+	return iHdlExpr::INT(strVal, radix);
 }
 
 // Real_number :
@@ -96,9 +94,111 @@ Expr * VerLiteralParser::parseIntNumber(antlr4::tree::TerminalNode* n,
 // Binary_number : ( Size )? Binary_base Binary_value ;
 // Octal_number : ( Size )? Octal_base Octal_value ;
 // Hex_number : ( Size )? Hex_base Hex_value ;
-Expr * VerLiteralParser::visitString(antlr4::tree::TerminalNode* n) {
+iHdlExpr * VerLiteralParser::visitString(TerminalNode* n) {
 	std::string s = n->getText();
-	return Expr::STR(s.substr(1, s.length() - 2)); // skipping " at the end
+	return iHdlExpr::STR(s.substr(1, s.length() - 2)); // skipping " at the end
+}
+
+HdlOperatorType VerLiteralParser::visitUnary_operator(
+		Verilog2001Parser::Unary_operatorContext * ctx) {
+	// unary_operator
+	//    : '+'
+	//    | '-'
+	//    | '!'
+	//    | '~'
+	//    | '&'
+	//    | '~&'
+	//    | '|'
+	//    | '~|'
+	//    | '^'
+	//    | '~^'
+	//    | '^~'
+	//    ;
+	std::string op = ctx->getText();
+
+	if (op == "+") {
+		return HdlOperatorType::ADD;
+	} else if (op == "-") {
+		return HdlOperatorType::SUB;
+	} else if (op == "!") {
+		return HdlOperatorType::NOT;
+	} else if (op == "~") {
+		return HdlOperatorType::NEG;
+	} else if (op == "&") {
+		return HdlOperatorType::AND;
+	} else if (op == "~&") {
+		return HdlOperatorType::NAND;
+	} else if (op == "|") {
+		return HdlOperatorType::OR;
+	} else if (op == "~|") {
+		return HdlOperatorType::NOR;
+	} else if (op == "^") {
+		return HdlOperatorType::XOR;
+	} else if (op == "~^") {
+		return HdlOperatorType::XNOR;
+	} else if (op == "^~") {
+		return HdlOperatorType::XNOR;
+	}
+
+	throw std::runtime_error("Unsupported unary operator " + op);
+}
+HdlOperatorType VerLiteralParser::visitBinary_operator(
+		Verilog2001Parser::Binary_operatorContext * ctx) {
+	// binary_operator : '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '===' |
+	// '!==' | '&&' | '||' | '**' | '<' | '<=' | '>' | '>=' | '&' | '|' |
+	// '^' | '^~' | '~^' | '>>' | '<<' | '>>>' | '<<<' ;
+	// [TODO] log eq, neq
+	std::string op = ctx->getText();
+
+	if (op.compare("+") == 0)
+		return HdlOperatorType::ADD;
+	else if (op.compare("-") == 0)
+		return HdlOperatorType::SUB;
+	else if (op.compare("*") == 0)
+		return HdlOperatorType::MUL;
+	else if (op.compare("/") == 0)
+		return HdlOperatorType::DIV;
+	else if (op.compare("%") == 0)
+		return HdlOperatorType::MOD;
+	else if (op.compare("==") == 0 || op.compare("===") == 0)
+		return HdlOperatorType::EQ;
+	else if (op.compare("!=") == 0 || op.compare("!==") == 0)
+		return HdlOperatorType::NEQ;
+	else if (op.compare("&&") == 0)
+		return HdlOperatorType::LOG_AND;
+	else if (op.compare("||") == 0)
+		return HdlOperatorType::LOG_OR;
+	else if (op.compare("**") == 0)
+		return HdlOperatorType::POW;
+	else if (op.compare("<") == 0)
+		return HdlOperatorType::LT;
+	else if (op.compare("<=") == 0)
+		return HdlOperatorType::LE;
+	else if (op.compare(">") == 0)
+		return HdlOperatorType::GT;
+	else if (op.compare(">=") == 0)
+		return HdlOperatorType::GE;
+	else if (op.compare("&") == 0)
+		return HdlOperatorType::AND;
+	else if (op.compare("|") == 0)
+		return HdlOperatorType::OR;
+	else if (op.compare("^") == 0)
+		return HdlOperatorType::XOR;
+	else if (op.compare("^~") == 0 || op.compare("~^") == 0
+			|| op.compare(">>") == 0)
+		return HdlOperatorType::SRL;
+	else if (op.compare("<<") == 0)
+		return HdlOperatorType::SLL;
+	else if (op.compare(">>>") == 0)
+		return HdlOperatorType::SRA;
+
+	assert(op.compare("<<<") == 0);
+	return HdlOperatorType::SLA;
+
+}
+
+iHdlExpr * VerLiteralParser::visitDolar_identifier(TerminalNode* n) {
+	return iHdlExpr::ID(n->getText());
 }
 
 }

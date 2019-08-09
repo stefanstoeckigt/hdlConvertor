@@ -1,6 +1,7 @@
-#include "constantParser.h"
-#include "interfaceParser.h"
-#include "notImplementedLogger.h"
+#include <hdlConvertor/vhdlConvertor/constantParser.h>
+
+#include <hdlConvertor/vhdlConvertor/interfaceParser.h>
+#include <hdlConvertor/notImplementedLogger.h>
 
 namespace hdlConvertor {
 namespace vhdl {
@@ -8,23 +9,19 @@ namespace vhdl {
 using namespace hdlConvertor::hdlObjects;
 using vhdlParser = vhdl_antlr::vhdlParser;
 
-
-std::vector<Variable*> * ConstantParser::visitConstant_declaration(
+std::vector<HdlVariableDef*> * ConstantParser::visitConstant_declaration(
 		vhdlParser::Constant_declarationContext* ctx) {
 	//constant_declaration :
 	//    CONSTANT identifier_list COLON subtype_indication
 	//    ( VARASGN expression )? SEMI
 	//  ;
 
-	//return InterfaceParser::extractVariables(ctx->identifier_list(),
-	//		ctx->subtype_indication(), ctx->expression());
-	// TODO: Expression
+	auto vars = InterfaceParser::extractVariables(ctx->identifier_list(),
+			ctx->subtype_indication(), ctx->expression());
+	for (auto v : *vars)
+		v->is_const = true;
 
-	NotImplementedLogger::print(
-				"ConstantParser.visitConstant_declaration");
-
-	return InterfaceParser::extractVariables(ctx->identifier_list(),
-			ctx->subtype_indication(), nullptr);
+	return vars;
 }
 
 }

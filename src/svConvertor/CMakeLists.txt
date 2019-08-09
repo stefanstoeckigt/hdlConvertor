@@ -1,0 +1,1 @@
+AddParserToBuild("sv2012" "svConvertor" OFF OFF OFF)
